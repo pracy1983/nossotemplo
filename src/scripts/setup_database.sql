@@ -64,6 +64,64 @@ CREATE TRIGGER handle_users_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
 
+-- Criar função para criar novo usuário com service role
+CREATE OR REPLACE FUNCTION public.create_new_user(user_data JSONB)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  -- Inserir o usuário usando a service role (bypass RLS)
+  INSERT INTO public.users (
+    id,
+    email,
+    full_name,
+    phone,
+    birth_date,
+    cpf,
+    rg,
+    religion,
+    unit,
+    is_active,
+    is_founder,
+    is_admin,
+    development_start_date,
+    internship_start_date,
+    magista_initiation_date,
+    not_entry_date,
+    master_mage_initiation_date,
+    photo_url,
+    inactive_since,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    (user_data->>'id')::UUID,
+    user_data->>'email',
+    user_data->>'full_name',
+    user_data->>'phone',
+    (user_data->>'birth_date')::DATE,
+    user_data->>'cpf',
+    user_data->>'rg',
+    user_data->>'religion',
+    user_data->>'unit',
+    COALESCE((user_data->>'is_active')::BOOLEAN, true),
+    COALESCE((user_data->>'is_founder')::BOOLEAN, false),
+    COALESCE((user_data->>'is_admin')::BOOLEAN, false),
+    (user_data->>'development_start_date')::DATE,
+    (user_data->>'internship_start_date')::DATE,
+    (user_data->>'magista_initiation_date')::DATE,
+    (user_data->>'not_entry_date')::DATE,
+    (user_data->>'master_mage_initiation_date')::DATE,
+    user_data->>'photo_url',
+    (user_data->>'inactive_since')::DATE,
+    COALESCE((user_data->>'created_at')::TIMESTAMP WITH TIME ZONE, NOW()),
+    COALESCE((user_data->>'updated_at')::TIMESTAMP WITH TIME ZONE, NOW())
+  );
+END;
+$$;
+
 -- Criar usuário admin
 INSERT INTO auth.users (
     instance_id,
@@ -113,7 +171,8 @@ VALUES (
 );
 
 -- Criar bucket para fotos
-INSERT INTO storage.buckets (id, name, public) VALUES ('photos', 'photos', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('photos', 'photos', true)
+ON CONFLICT (id) DO NOTHING;
 
 -- Criar política de acesso para o bucket de fotos
 CREATE POLICY "Anyone can read photos" ON storage.objects FOR SELECT

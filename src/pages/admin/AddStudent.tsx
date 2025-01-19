@@ -54,33 +54,35 @@ export function AddStudent() {
       // Gerar uma senha temporária
       const tempPassword = Math.random().toString(36).slice(-8);
 
-      // Criar usuário no sistema de autenticação
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: tempPassword,
-        email_confirm: true
-      });
-
-      if (authError) throw authError;
-
       // Se o usuário estiver inativo, definir a data de inativação
       const dataToInsert = {
         ...formData,
-        id: authData.user.id, // Usar o ID gerado pelo sistema de autenticação
         inactive_since: !formData.is_active ? new Date().toISOString() : null,
         created_at: new Date().toISOString(),
       };
 
-      // Inserir novo usuário na tabela users
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert([dataToInsert]);
+      // Inserir novo usuário na tabela users usando a service role key
+      const { error: insertError } = await supabase.rpc('create_new_user', {
+        user_data: dataToInsert
+      });
 
       if (insertError) {
-        // Se houver erro ao inserir na tabela users, deletar o usuário da autenticação
-        await supabase.auth.admin.deleteUser(authData.user.id);
         throw insertError;
       }
+
+      // Criar usuário no sistema de autenticação
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: formData.full_name,
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Erro ao criar usuário');
 
       toast.success('Aluno adicionado com sucesso! A senha temporária é: ' + tempPassword);
       navigate('/students');
