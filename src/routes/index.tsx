@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, Navigate, redirect } from 'react-router-dom';
 import { AdminDashboard } from '../pages/admin/Dashboard';
 import { StudentsList } from '../pages/admin/StudentsList';
 import { Events } from '../pages/admin/Events';
@@ -8,23 +8,14 @@ import { ImportStudents } from '../pages/admin/ImportStudents';
 import { AddStudent } from '../pages/admin/AddStudent';
 import { Login } from '../pages/Login';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 
-interface PrivateRouteProps {
-  children: React.ReactNode;
-}
-
-const PrivateRoute = ({ children }: PrivateRouteProps) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Carregando...</div>;
+const loader = () => {
+  const auth = supabase.auth.getSession();
+  if (!auth) {
+    return redirect('/login');
   }
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  return <>{children}</>;
+  return null;
 };
 
 export const router = createBrowserRouter([
@@ -34,58 +25,37 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: (
-      <PrivateRoute>
-        <AdminDashboard />
-      </PrivateRoute>
-    ),
+    element: <AdminDashboard />,
+    loader: loader,
   },
   {
     path: '/students',
-    element: (
-      <PrivateRoute>
-        <StudentsList />
-      </PrivateRoute>
-    ),
+    element: <StudentsList />,
+    loader: loader,
   },
   {
     path: '/students/add',
-    element: (
-      <PrivateRoute>
-        <AddStudent />
-      </PrivateRoute>
-    ),
+    element: <AddStudent />,
+    loader: loader,
   },
   {
     path: '/events',
-    element: (
-      <PrivateRoute>
-        <Events />
-      </PrivateRoute>
-    ),
+    element: <Events />,
+    loader: loader,
   },
   {
     path: '/attendance',
-    element: (
-      <PrivateRoute>
-        <Attendance />
-      </PrivateRoute>
-    ),
+    element: <Attendance />,
+    loader: loader,
   },
   {
     path: '/statistics',
-    element: (
-      <PrivateRoute>
-        <Statistics />
-      </PrivateRoute>
-    ),
+    element: <Statistics />,
+    loader: loader,
   },
   {
     path: '/import',
-    element: (
-      <PrivateRoute>
-        <ImportStudents />
-      </PrivateRoute>
-    ),
+    element: <ImportStudents />,
+    loader: loader,
   },
 ]);
