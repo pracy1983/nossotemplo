@@ -35,7 +35,13 @@ export function processStudentData(
           // Handle special fields
           switch (dbField) {
             case 'is_founder':
-              value = ['sim', 'yes', 'true', '1'].includes(value?.toLowerCase());
+            case 'is_admin':
+            case 'is_active':
+              value = ['sim', 'yes', 'true', '1'].includes(value?.toLowerCase())
+                ? true
+                : ['não', 'no', 'false', '0'].includes(value?.toLowerCase())
+                ? false
+                : undefined;
               break;
             case 'unit':
               value = value === 'BH' ? 'Templo BH' : 'Templo SP';
@@ -50,6 +56,25 @@ export function processStudentData(
                 value = `${name}@nossotemplo.com`;
               }
               break;
+            case 'cpf':
+              value = value.replace(/\D/g, '');
+              break;
+            case 'phone':
+              value = value.replace(/\D/g, '');
+              break;
+            case 'development_start_date':
+            case 'internship_start_date':
+            case 'magista_initiation_date':
+            case 'not_entry_date':
+            case 'master_mage_initiation_date':
+            case 'inactive_since':
+              if (value) {
+                const date = new Date(value);
+                if (!isNaN(date.getTime())) {
+                  value = date.toISOString().split('T')[0];
+                }
+              }
+              break;
           }
 
           student[dbField as keyof StudentImport] = value;
@@ -60,6 +85,9 @@ export function processStudentData(
     // Validate required fields
     if (!student.full_name) {
       throw new Error(`Linha ${index + 2}: Nome completo é obrigatório`);
+    }
+    if (!student.unit) {
+      throw new Error(`Linha ${index + 2}: Unidade é obrigatória`);
     }
 
     return student as StudentImport;

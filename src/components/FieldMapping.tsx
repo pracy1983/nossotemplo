@@ -11,17 +11,21 @@ const DATABASE_FIELDS: DatabaseField[] = [
   { key: 'full_name', label: 'Nome Completo', required: true },
   { key: 'email', label: 'Email' },
   { key: 'phone', label: 'Telefone' },
-  { key: 'unit', label: 'Unidade' },
-  { key: 'religion', label: 'Religião' },
   { key: 'birth_date', label: 'Data de Nascimento' },
   { key: 'cpf', label: 'CPF' },
   { key: 'rg', label: 'RG' },
-  { key: 'development_start_date', label: 'Data de Início do Desenvolvimento' },
-  { key: 'internship_start_date', label: 'Data de Início do Estágio' },
-  { key: 'magista_initiation_date', label: 'Data de Iniciação como Magista' },
-  { key: 'not_entry_date', label: 'Data de Entrada na N.O.T.' },
-  { key: 'master_mage_initiation_date', label: 'Data de Iniciação como Mestre Mago' },
-  { key: 'is_founder', label: 'Fundador' }
+  { key: 'religion', label: 'Religião' },
+  { key: 'unit', label: 'Unidade', required: true },
+  { key: 'photo_url', label: 'URL da Foto' },
+  { key: 'is_admin', label: 'É Admin?' },
+  { key: 'is_founder', label: 'É Fundador?' },
+  { key: 'is_active', label: 'Ativo?' },
+  { key: 'development_start_date', label: 'Início Desenvolvimento' },
+  { key: 'internship_start_date', label: 'Início Estágio' },
+  { key: 'magista_initiation_date', label: 'Iniciação Magista' },
+  { key: 'not_entry_date', label: 'Entrada NOT' },
+  { key: 'master_mage_initiation_date', label: 'Iniciação Mestre Mago' },
+  { key: 'inactive_since', label: 'Inativo desde' }
 ];
 
 export function FieldMapping({ sheetColumns, fieldMapping, onChange }: FieldMappingProps) {
