@@ -51,21 +51,38 @@ export function AddStudent() {
         throw new Error('Já existe um usuário com este email');
       }
 
+      // Gerar uma senha temporária
+      const tempPassword = Math.random().toString(36).slice(-8);
+
+      // Criar usuário no sistema de autenticação
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: tempPassword,
+        email_confirm: true
+      });
+
+      if (authError) throw authError;
+
       // Se o usuário estiver inativo, definir a data de inativação
       const dataToInsert = {
         ...formData,
+        id: authData.user.id, // Usar o ID gerado pelo sistema de autenticação
         inactive_since: !formData.is_active ? new Date().toISOString() : null,
         created_at: new Date().toISOString(),
       };
 
-      // Inserir novo usuário
-      const { error } = await supabase
+      // Inserir novo usuário na tabela users
+      const { error: insertError } = await supabase
         .from('users')
         .insert([dataToInsert]);
 
-      if (error) throw error;
+      if (insertError) {
+        // Se houver erro ao inserir na tabela users, deletar o usuário da autenticação
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw insertError;
+      }
 
-      toast.success('Aluno adicionado com sucesso!');
+      toast.success('Aluno adicionado com sucesso! A senha temporária é: ' + tempPassword);
       navigate('/students');
     } catch (error: any) {
       toast.error('Erro ao adicionar aluno: ' + error.message);
@@ -209,7 +226,7 @@ export function AddStudent() {
               </label>
               <select
                 name="unit"
-                value={formData.unit || 'Templo SP'}
+                value={formData.unit}
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none"
               >
@@ -219,49 +236,7 @@ export function AddStudent() {
             </div>
           </div>
 
-          {/* Status */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                name="is_active"
-                checked={formData.is_active}
-                onChange={handleChange}
-                className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-              />
-              <label className="text-sm font-medium text-gray-300">
-                Aluno Ativo
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                name="is_founder"
-                checked={formData.is_founder}
-                onChange={handleChange}
-                className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-              />
-              <label className="text-sm font-medium text-gray-300">
-                É Fundador
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                name="is_admin"
-                checked={formData.is_admin}
-                onChange={handleChange}
-                className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
-              />
-              <label className="text-sm font-medium text-gray-300">
-                É Administrador
-              </label>
-            </div>
-          </div>
-
-          {/* Datas Importantes */}
+          {/* Datas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -327,35 +302,62 @@ export function AddStudent() {
                 className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none"
               />
             </div>
-
-            {!formData.is_active && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Data de Inativação
-                </label>
-                <input
-                  type="date"
-                  name="inactive_since"
-                  value={formData.inactive_since || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:outline-none"
-                />
-              </div>
-            )}
           </div>
 
-          <div className="flex justify-end gap-4">
+          {/* Flags */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_active"
+                checked={formData.is_active}
+                onChange={handleChange}
+                className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 block text-sm text-gray-300">
+                Ativo
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_founder"
+                checked={formData.is_founder}
+                onChange={handleChange}
+                className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 block text-sm text-gray-300">
+                Fundador
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                name="is_admin"
+                checked={formData.is_admin}
+                onChange={handleChange}
+                className="h-4 w-4 text-red-500 focus:ring-red-500 border-gray-300 rounded"
+              />
+              <label className="ml-2 block text-sm text-gray-300">
+                Administrador
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
             <button
               type="button"
               onClick={() => navigate('/students')}
-              className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-50"
             >
               {isLoading ? 'Salvando...' : 'Salvar'}
             </button>
