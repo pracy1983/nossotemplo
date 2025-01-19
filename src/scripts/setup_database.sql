@@ -41,6 +41,14 @@ CREATE POLICY "Admins can do anything." ON public.users FOR ALL
         )
     );
 
+CREATE POLICY "Enable insert for admins" ON public.users FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.users
+            WHERE id = auth.uid() AND is_admin = true
+        )
+    );
+
 -- Criar função para atualizar o timestamp
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
