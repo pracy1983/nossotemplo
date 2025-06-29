@@ -43,6 +43,9 @@ export interface Student {
   howFoundTemple?: string; // Como conheceu o templo
   acceptsImageTerms?: boolean; // Se aceita termos de imagem
   imageTermsAcceptedAt?: string; // Data de aceitação dos termos
+  // Social media fields
+  instagramPersonal?: string; // Instagram Pessoal
+  instagramMagicko?: string; // Instagram Mágicko
 }
 
 export interface Event {

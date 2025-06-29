@@ -639,34 +639,150 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
                   <h3 className="text-lg font-semibold text-white mb-4">Desenvolvimento Espiritual</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-400">Início de Desenvolvimento:</span>
-                      <p className="text-white">
-                        {selectedStudent.developmentStartDate ? formatDate(selectedStudent.developmentStartDate) : 'Não informado'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Início de Desenvolvimento
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.developmentStartDate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, developmentStartDate: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.developmentStartDate ? formatDate(selectedStudent.developmentStartDate) : 'Não informado'}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <span className="text-gray-400">Início do Estágio:</span>
-                      <p className="text-white">
-                        {selectedStudent.internshipStartDate ? formatDate(selectedStudent.internshipStartDate) : 'Não informado'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Início do Estágio
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.internshipStartDate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, internshipStartDate: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.internshipStartDate ? formatDate(selectedStudent.internshipStartDate) : 'Não informado'}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <span className="text-gray-400">Iniciação como Magista:</span>
-                      <p className="text-white">
-                        {selectedStudent.magistInitiationDate ? formatDate(selectedStudent.magistInitiationDate) : 'Não informado'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Iniciação como Magista
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.magistInitiationDate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, magistInitiationDate: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.magistInitiationDate ? formatDate(selectedStudent.magistInitiationDate) : 'Não informado'}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <span className="text-gray-400">Entrada na N.O.T.:</span>
-                      <p className="text-white">
-                        {selectedStudent.notEntryDate ? formatDate(selectedStudent.notEntryDate) : 'Não informado'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Entrada na N.O.T.
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.notEntryDate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, notEntryDate: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.notEntryDate ? formatDate(selectedStudent.notEntryDate) : 'Não informado'}
+                        </p>
+                      )}
                     </div>
                     <div className="md:col-span-2">
-                      <span className="text-gray-400">Iniciação como Mestre Mago:</span>
-                      <p className="text-white">
-                        {selectedStudent.masterMagusInitiationDate ? formatDate(selectedStudent.masterMagusInitiationDate) : 'Não informado'}
-                      </p>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Iniciação como Mestre Mago
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData.masterMagusInitiationDate || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, masterMagusInitiationDate: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.masterMagusInitiationDate ? formatDate(selectedStudent.masterMagusInitiationDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Social Media */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Redes Sociais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Instagram Pessoal
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData.instagramPersonal || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, instagramPersonal: e.target.value.replace('@', '') }))}
+                          placeholder="usuario (sem @)"
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.instagramPersonal ? (
+                            <a 
+                              href={`https://www.instagram.com/${selectedStudent.instagramPersonal}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              @{selectedStudent.instagramPersonal}
+                            </a>
+                          ) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Instagram Mágicko
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData.instagramMagicko || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, instagramMagicko: e.target.value.replace('@', '') }))}
+                          placeholder="usuario (sem @)"
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.instagramMagicko ? (
+                            <a 
+                              href={`https://www.instagram.com/${selectedStudent.instagramMagicko}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              @{selectedStudent.instagramMagicko}
+                            </a>
+                          ) : 'Não informado'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
