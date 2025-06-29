@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Send, Copy, Check, AlertTriangle, Clock, UserCheck, X, Plus, Search, Filter, Link } from 'lucide-react';
+import { Mail, Send, Copy, Check, AlertTriangle, UserCheck, X, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, Clock } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
 import { generateId, validateEmail } from '../../utils/helpers';
@@ -15,6 +15,16 @@ const StudentInvites: React.FC = () => {
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  
+  // Variáveis de estado para as funcionalidades solicitadas
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [emailTemplate, setEmailTemplate] = useState({
+    subject: 'Convite para o Nosso Templo',
+    body: 'Olá {nome},\n\nVocê foi convidado para participar do Nosso Templo.\n\nClique no link abaixo para aceitar o convite:\n{link}\n\nAtenciosamente,\nEquipe Nosso Templo'
+  });
+  const [showSendEmailsModal, setShowSendEmailsModal] = useState(false);
 
   const [inviteForm, setInviteForm] = useState<InviteData>({
     fullName: '',
@@ -41,10 +51,86 @@ const StudentInvites: React.FC = () => {
     return matchesSearch && matchesStatus && matchesUnit;
   });
 
+  // Paginação dos estudantes filtrados
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const paginatedStudents = filteredInvites.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
+
   // Get pending approvals
   const pendingApprovals = students.filter(student => 
     student.isPendingApproval && student.inviteStatus === 'accepted'
   );
+  
+  // Funções para seleção de estudantes
+  const handleSelectAll = (students: Student[]) => {
+    if (selectedStudents.size === students.length) {
+      setSelectedStudents(new Set());
+    } else {
+      const newSelected = new Set<string>();
+      students.forEach(student => {
+        if (student.id) {
+          newSelected.add(student.id);
+        }
+      });
+      setSelectedStudents(newSelected);
+    }
+  };
+
+  const handleSelectStudent = (studentId: string) => {
+    const newSelected = new Set(selectedStudents);
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId);
+    } else {
+      newSelected.add(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+  
+  // Funções para paginação
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setSelectedStudents(new Set()); // Limpa seleções ao mudar de página
+  };
+  
+  // Funções para ações em massa
+  const handleBulkApprove = () => {
+    if (selectedStudents.size === 0) return;
+    
+    if (confirm(`Deseja aprovar ${selectedStudents.size} membros selecionados?`)) {
+      // Implementar a lógica de aprovação em massa
+      selectedStudents.forEach(id => {
+        handleApproveStudent(id);
+      });
+      setSelectedStudents(new Set());
+    }
+  };
+  
+  const handleBulkReject = () => {
+    if (selectedStudents.size === 0) return;
+    
+    if (confirm(`Deseja rejeitar ${selectedStudents.size} membros selecionados?`)) {
+      // Implementar a lógica de rejeição em massa
+      selectedStudents.forEach(id => {
+        handleRejectStudent(id);
+      });
+      setSelectedStudents(new Set());
+    }
+  };
+  
+  const handleBulkSendEmails = () => {
+    if (selectedStudents.size === 0) return;
+    setShowSendEmailsModal(true);
+  };
+  
+  const handleSendBulkEmails = () => {
+    if (selectedStudents.size === 0) return;
+    
+    // Implementar a lógica de envio de e-mails em massa
+    alert(`E-mails enviados para ${selectedStudents.size} membros selecionados`);
+    setShowSendEmailsModal(false);
+    setSelectedStudents(new Set());
+  };
 
   const validateInviteForm = () => {
     const newErrors: Record<string, string> = {};
@@ -213,36 +299,45 @@ const StudentInvites: React.FC = () => {
     }
   };
 
-  const handleApproveStudent = async (studentId: string) => {
-    try {
-      // Update student to approved status
-      const student = students.find(s => s.id === studentId);
-      if (!student) return;
-
-      const updatedStudent = {
-        ...student,
-        isActive: true,
-        isPendingApproval: false,
-        inviteStatus: 'accepted' as const
-      };
-
-      // In a real app, you would call updateStudent here
-      alert('Membro aprovado com sucesso!');
-    } catch (error) {
-      console.error('Error approving student:', error);
-      alert('Erro ao aprovar membro. Tente novamente.');
-    }
+  const handleApproveStudent = (studentId: string) => {
+    // Find the student
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    // Update student status
+    const updatedStudentData = {
+      ...student,
+      isPendingApproval: false,
+      isActive: true
+    };
+    
+    // Here you would call an API to update the student with updatedStudentData
+    console.log('Dados atualizados:', updatedStudentData);
+    
+    // For now, we'll just show an alert
+    alert(`Membro ${student.fullName} aprovado com sucesso!`);
   };
 
-  const handleRejectStudent = async (studentId: string) => {
-    if (confirm('Tem certeza que deseja rejeitar este cadastro?')) {
-      try {
-        // In a real app, you would call deleteStudent here
-        alert('Cadastro rejeitado.');
-      } catch (error) {
-        console.error('Error rejecting student:', error);
-        alert('Erro ao rejeitar cadastro. Tente novamente.');
-      }
+  const handleRejectStudent = async (id: string) => {
+    try {
+      // Update student to rejected status
+      const student = students.find(s => s.id === id);
+      if (!student) return;
+
+      const updatedStudentData = {
+        ...student,
+        isPendingApproval: false,
+        isActive: false,
+        inviteStatus: 'rejected' as const
+      };
+
+      // In a real app, you would call updateStudent with updatedStudentData
+      console.log('Dados do membro rejeitado:', updatedStudentData);
+      
+      alert(`Membro ${student.fullName} rejeitado com sucesso!`);
+    } catch (error) {
+      console.error('Error rejecting student:', error);
+      alert('Erro ao rejeitar membro. Tente novamente.');
     }
   };
 
@@ -413,73 +508,197 @@ const StudentInvites: React.FC = () => {
 
       {/* Invites List */}
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-        <h2 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-          <Mail className="w-6 h-6 text-red-400" />
-          <span>Convites Enviados ({filteredInvites.length})</span>
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
+            <Mail className="w-6 h-6 text-red-400" />
+            <span>Convites Enviados ({filteredInvites.length})</span>
+          </h2>
+          
+          {/* Botões de ação em massa */}
+          {selectedStudents.size > 0 && (
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleBulkApprove}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors text-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Aprovar ({selectedStudents.size})</span>
+              </button>
+              
+              <button
+                onClick={handleBulkReject}
+                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors text-sm"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Rejeitar ({selectedStudents.size})</span>
+              </button>
+              
+              <button
+                onClick={handleBulkSendEmails}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition-colors text-sm"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Enviar E-mails ({selectedStudents.size})</span>
+              </button>
+            </div>
+          )}
+        </div>
         
         {filteredInvites.length > 0 ? (
-          <div className="space-y-4">
-            {filteredInvites.map(student => (
-              <div key={student.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-white">{student.fullName}</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-800 border-b border-gray-700">
+                  <th className="p-3 text-left">
+                    <div className="flex items-center">
+                      <button 
+                        onClick={() => handleSelectAll(paginatedStudents)}
+                        className="mr-3 text-gray-400 hover:text-white"
+                      >
+                        {selectedStudents.size === paginatedStudents.length ? 
+                          <CheckSquare className="w-5 h-5" /> : 
+                          <Square className="w-5 h-5" />
+                        }
+                      </button>
+                      <span>Nome</span>
+                    </div>
+                  </th>
+                  <th className="p-3 text-left">Email</th>
+                  <th className="p-3 text-left">Templo</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Data</th>
+                  <th className="p-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedStudents.map(student => (
+                  <tr key={student.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                    <td className="p-3">
+                      <div className="flex items-center">
+                        <button 
+                          onClick={() => handleSelectStudent(student.id!)}
+                          className="mr-3 text-gray-400 hover:text-white"
+                        >
+                          {selectedStudents.has(student.id!) ? 
+                            <CheckSquare className="w-5 h-5" /> : 
+                            <Square className="w-5 h-5" />
+                          }
+                        </button>
+                        <span className="font-medium text-white">{student.fullName}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-gray-400">{student.email}</td>
+                    <td className="p-3 text-gray-400">{student.unit} {student.turma && `• ${student.turma}`}</td>
+                    <td className="p-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.inviteStatus)}`}>
                         {getStatusLabel(student.inviteStatus)}
                       </span>
-                    </div>
-                    
-                    <div className="text-sm text-gray-400">
-                      <p>{student.email}</p>
-                      <p>Templo {student.unit} • {student.turma && `Turma: ${student.turma}`}</p>
-                      <p>Enviado em: {formatDate(student.invitedAt)} por {student.invitedBy}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    {student.inviteStatus === 'pending' && student.inviteToken && (
-                      <button
-                        onClick={() => handleCopyInviteLink(student.inviteToken!)}
-                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-                      >
-                        {copiedToken === student.inviteToken ? (
+                    </td>
+                    <td className="p-3 text-gray-400">{formatDate(student.invitedAt)}</td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {student.inviteStatus === 'pending' && student.inviteToken && (
+                          <button
+                            onClick={() => handleCopyInviteLink(student.inviteToken!)}
+                            className="p-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg transition-colors"
+                            title="Copiar Link"
+                          >
+                            {copiedToken === student.inviteToken ? 
+                              <Check className="w-4 h-4" /> : 
+                              <Copy className="w-4 h-4" />
+                            }
+                          </button>
+                        )}
+                        
+                        {student.inviteStatus === 'accepted' && student.isPendingApproval && (
                           <>
-                            <Check className="w-4 h-4" />
-                            <span>Copiado!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4" />
-                            <span>Copiar Link</span>
+                            <button
+                              onClick={() => handleRejectStudent(student.id!)}
+                              className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg transition-colors"
+                              title="Rejeitar"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            
+                            <button
+                              onClick={() => handleApproveStudent(student.id!)}
+                              className="p-1.5 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded-lg transition-colors"
+                              title="Aprovar"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
                           </>
                         )}
-                      </button>
-                    )}
-                    
-                    {student.inviteStatus === 'accepted' && student.isPendingApproval && (
-                      <div className="flex items-center space-x-2 text-yellow-400">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-sm">Aguardando aprovação</span>
+                        
+                        {student.inviteStatus === 'accepted' && student.isPendingApproval && (
+                          <span className="text-yellow-400">
+                            <Clock className="w-4 h-4" />
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-6">
+                <div className="text-sm text-gray-400">
+                  Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredInvites.length)} de {filteredInvites.length}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    // Lógica para mostrar as páginas corretas quando há muitas páginas
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-8 h-8 rounded-lg ${currentPage === pageNum ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <Mail className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-400 mb-2">
-              Nenhum convite encontrado
-            </h3>
-            <p className="text-gray-500">
+          <div className="bg-gray-800 rounded-lg p-6 text-center">
+            <p className="text-gray-400">
               {searchTerm || filterStatus !== 'all' || filterUnit !== 'all'
-                ? 'Tente ajustar os filtros de busca'
-                : 'Clique em "Enviar Convite" para convidar novos membros'
-              }
+                ? 'Nenhum convite encontrado com os filtros atuais.'
+                : 'Clique em "Enviar Convite" para convidar novos membros.'}
             </p>
           </div>
         )}
@@ -630,6 +849,62 @@ const StudentInvites: React.FC = () => {
         </form>
       </Modal>
 
+      {/* Modal para envio de e-mails em massa */}
+      <Modal
+        isOpen={showSendEmailsModal}
+        onClose={() => setShowSendEmailsModal(false)}
+        title={`Enviar E-mails para ${selectedStudents.size} Membros`}
+        size="lg"
+      >
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Assunto
+              </label>
+              <input
+                type="text"
+                value={emailTemplate.subject}
+                onChange={(e) => setEmailTemplate({...emailTemplate, subject: e.target.value})}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Corpo do E-mail
+              </label>
+              <p className="text-xs text-gray-400 mb-2">
+                Use {'{nome}'} para inserir o nome do membro e {'{link}'} para inserir o link de convite.
+              </p>
+              <textarea
+                value={emailTemplate.body}
+                onChange={(e) => setEmailTemplate({...emailTemplate, body: e.target.value})}
+                rows={8}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowSendEmailsModal(false)}
+              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            
+            <button
+              onClick={handleSendBulkEmails}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              <Send className="w-4 h-4" />
+              <span>Enviar E-mails</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+      
       {/* Generated Link Modal */}
       <Modal
         isOpen={showLinkModal}

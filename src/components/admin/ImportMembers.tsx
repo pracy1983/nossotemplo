@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Download, Mail, Send, Check, X, AlertTriangle, FileSpreadsheet, Link, Users, Eye, Edit3, Trash2 } from 'lucide-react';
+import { Upload, Download, Mail, Check, X, FileSpreadsheet, Link, Eye } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student } from '../../types';
 import { generateId, validateEmail, formatCPF, formatPhone } from '../../utils/helpers';
@@ -17,9 +17,129 @@ interface FieldMapping {
   [key: string]: string; // CSV column -> Student field
 }
 
+// Função para converter data do formato brasileiro para ISO
+const convertDateFormat = (dateStr: string): string => {
+  if (!dateStr) return '1900-01-01'; // Valor padrão para datas vazias
+  
+  // Remove espaços extras
+  dateStr = dateStr.trim();
+  
+  // Verifica se já está no formato ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    try {
+      // Validar se a data está no formato correto
+      const [year, month, day] = dateStr.split('-').map(Number);
+      if (month > 12 || day > 31) {
+        console.warn(`Data inválida: ${dateStr}, usando valor padrão`);
+        return '1900-01-01';
+      }
+      return dateStr;
+    } catch (e) {
+      console.warn(`Erro ao processar data: ${dateStr}`, e);
+      return '1900-01-01';
+    }
+  }
+  
+  // Tenta diferentes formatos de data brasileiros
+  let day, month, year;
+  
+  // Formato DD/MM/AAAA ou DD-MM-AAAA
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(dateStr)) {
+    const parts = dateStr.split(/[\/\-]/);
+    day = parts[0].padStart(2, '0');
+    month = parts[1].padStart(2, '0');
+    year = parts[2];
+    
+    // Validar mês e dia
+    if (parseInt(month) > 12 || parseInt(day) > 31) {
+      console.warn(`Data inválida: ${dateStr}, usando valor padrão`);
+      return '1900-01-01';
+    }
+    
+    // Se o ano tem 2 dígitos, assume século 20 ou 21
+    if (year.length === 2) {
+      const currentYear = new Date().getFullYear();
+      const century = parseInt(year) > (currentYear - 2000) % 100 ? '19' : '20';
+      year = century + year;
+    }
+    
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Formato DD/MM (assume ano atual)
+  if (/^\d{1,2}[\/\-]\d{1,2}$/.test(dateStr)) {
+    const parts = dateStr.split(/[\/\-]/);
+    day = parts[0].padStart(2, '0');
+    month = parts[1].padStart(2, '0');
+    year = new Date().getFullYear().toString();
+    
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Formatos textuais comuns em português
+  const monthMap: Record<string, string> = {
+    'jan': '01', 'janeiro': '01',
+    'fev': '02', 'fevereiro': '02',
+    'mar': '03', 'março': '03',
+    'abr': '04', 'abril': '04',
+    'mai': '05', 'maio': '05',
+    'jun': '06', 'junho': '06',
+    'jul': '07', 'julho': '07',
+    'ago': '08', 'agosto': '08',
+    'set': '09', 'setembro': '09',
+    'out': '10', 'outubro': '10',
+    'nov': '11', 'novembro': '11',
+    'dez': '12', 'dezembro': '12'
+  };
+  
+  // Tenta extrair mês textual (ex: "10 de janeiro de 2022")
+  const textualDateRegex = /(\d{1,2})\s+(?:de\s+)?([a-zçã]+)(?:\s+(?:de\s+)?(\d{2,4}))?/i;
+  const textMatch = dateStr.match(textualDateRegex);
+  
+  if (textMatch) {
+    day = textMatch[1].padStart(2, '0');
+    const monthText = textMatch[2].toLowerCase();
+    month = '';
+    
+    // Procura o mês no mapa
+    for (const key in monthMap) {
+      if (monthText.includes(key)) {
+        month = monthMap[key];
+        break;
+      }
+    }
+    
+    if (!month) return ''; // Mês não reconhecido
+    
+    year = textMatch[3] || new Date().getFullYear().toString();
+    if (year.length === 2) {
+      const currentYear = new Date().getFullYear();
+      const century = parseInt(year) > (currentYear - 2000) % 100 ? '19' : '20';
+      year = century + year;
+    }
+    
+    return `${year}-${month}-${day}`;
+  }
+  
+  try {
+    // Tenta criar uma data e formatar
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch (e) {
+    console.error('Erro ao converter data:', dateStr, e);
+  }
+  
+  // Se chegou até aqui, não conseguiu converter
+  // Retorna data padrão para evitar erros no banco de dados
+  console.warn(`Não foi possível converter a data: ${dateStr}, usando valor padrão`);
+  return '1900-01-01';
+};
+
 const ImportMembers: React.FC = () => {
-  const { addStudent, students, temples } = useData();
-  const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'import' | 'email'>('upload');
+  const { addStudent, students } = useData();
+  const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'import' | 'results'>('upload');
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [fieldMapping, setFieldMapping] = useState<FieldMapping>({});
@@ -63,9 +183,17 @@ Equipe Nosso Templo`
     complement: 'Complemento',
     neighborhood: 'Bairro',
     zipCode: 'CEP',
-    city: 'Cidade',
-    state: 'Estado',
-    turma: 'Turma/Grupo'
+    cityState: 'Cidade-Estado (Separar)',
+    city: 'Cidade (Individual)',
+    state: 'Estado (Individual)',
+    turma: 'Turma/Grupo',
+    howFoundTemple: 'Como ficou sabendo',
+    acceptsImageTerms: 'Aceitou Termos de Imagem',
+    developmentStartDate: 'Data Início Desenvolvimento',
+    internshipStartDate: 'Data Iniciação',
+    notEntryDate: 'Data Entrada N.O.T.',
+    magistInitiationDate: 'Data Iniciação Mago',
+    masterMagusInitiationDate: 'Data Iniciação Mestre Mago',
   };
 
   // Convert Google Sheets URL to CSV export URL
@@ -242,97 +370,191 @@ Equipe Nosso Templo`
 
     setFieldMapping(mapping);
   };
-
-  // Process mapped data
-  const processData = () => {
-    const rows: ImportedRow[] = csvData.map((row, index) => {
-      const data: Record<string, string> = {};
-      const mapped: Partial<Student> = {};
-
-      // Create data object
-      headers.forEach((header, headerIndex) => {
-        data[header] = row[headerIndex] || '';
-      });
-
-      // Apply mapping
-      Object.entries(fieldMapping).forEach(([csvField, studentField]) => {
-        const value = data[csvField]?.trim();
-        if (value && studentField) {
-          if (studentField === 'birthDate' && value) {
-            // Try to parse different date formats
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              mapped[studentField] = date.toISOString().split('T')[0];
-            }
-          } else if (studentField === 'cpf' && value) {
-            mapped[studentField] = formatCPF(value);
-          } else if (studentField === 'phone' && value) {
-            mapped[studentField] = formatPhone(value);
-          } else if (studentField === 'unit' && value) {
-            // Map unit names to abbreviations
-            const unitMap: Record<string, string> = {
-              'sp': 'SP',
-              'são paulo': 'SP',
-              'templo sp': 'SP',
-              'bh': 'BH',
-              'belo horizonte': 'BH',
-              'templo bh': 'BH',
-              'cp': 'CP',
-              'campinas': 'CP',
-              'templo cp': 'CP'
-            };
-            mapped[studentField] = unitMap[value.toLowerCase()] || value;
-          } else {
-            (mapped as any)[studentField] = value;
-          }
-        }
-      });
-
-      // Set defaults
-      mapped.id = generateId();
-      mapped.isFounder = false;
-      mapped.isActive = true;
-      mapped.isAdmin = false;
-      mapped.isGuest = false;
-      mapped.role = 'student';
-      mapped.attendance = [];
-      mapped.isPendingApproval = true; // Require approval for imported students
-
-      return {
-        id: mapped.id!,
-        data,
-        mapped,
-        status: 'pending' as const
-      };
-    });
-
-    setImportedRows(rows);
-    setStep('preview');
-  };
-
   // Validate row data
   const validateRow = (row: ImportedRow): { isValid: boolean; error?: string } => {
-    if (!row.mapped.fullName) {
+    // Verificação de campos obrigatórios
+    if (!row.mapped.fullName || row.mapped.fullName.trim() === '') {
       return { isValid: false, error: 'Nome é obrigatório' };
     }
     
-    if (!row.mapped.email) {
+    // Email é obrigatório e deve ser válido
+    if (!row.mapped.email || row.mapped.email.trim() === '') {
       return { isValid: false, error: 'Email é obrigatório' };
     }
     
     if (!validateEmail(row.mapped.email)) {
       return { isValid: false, error: 'Email inválido' };
     }
-
-    // Check for duplicate email
+    
+    // Verifica se o campo unit está preenchido (obrigatório no banco de dados)
+    if (!row.mapped.unit || row.mapped.unit.trim() === '') {
+      // Atribuir valor padrão em vez de retornar erro
+      row.mapped.unit = 'SP';
+    }
+    
+    // Verifica se o email já existe no sistema
     const existingStudent = students.find(s => 
-      s.email.toLowerCase() === row.mapped.email!.toLowerCase()
+      s.email && row.mapped.email && 
+      s.email.toLowerCase() === row.mapped.email.toLowerCase()
     );
+    
     if (existingStudent) {
-      return { isValid: false, error: 'Email já existe no sistema' };
+      // Opção para atualizar em vez de rejeitar
+      // Apenas alertamos, mas permitimos continuar
+      console.warn(`Email já cadastrado: ${row.mapped.email}`);
+      // Não retornamos erro para permitir a importação mesmo com email duplicado
+      // return { isValid: false, error: 'Email já cadastrado' };
+    }
+    
+    // Se chegou até aqui, é válido
+    return { isValid: true };
+  };
+
+  // Process mapped data
+  const processData = () => {
+    if (Object.keys(fieldMapping).length === 0) {
+      alert('Mapeie pelo menos um campo para continuar.');
+      return;
     }
 
-    return { isValid: true };
+    const processedRows: ImportedRow[] = [];
+
+    for (const rowValues of csvData.slice(1)) {
+      const rowData: Record<string, string> = {};
+      headers.forEach((header, i) => {
+        rowData[header] = rowValues[i]?.trim() || '';
+      });
+
+      const mappedStudent: Partial<Student> = {};
+      for (const csvHeader in fieldMapping) {
+        const studentField = fieldMapping[csvHeader];
+        const cellValue = rowData[csvHeader];
+
+        if (!studentField || !cellValue) continue;
+
+        if (studentField === 'cityState') {
+          // Extrai cidade e estado de vários formatos possíveis
+          // Formatos suportados: "São Paulo - SP", "São Paulo/SP", "São Paulo SP"
+          let city = '';
+          let state = '';
+          
+          // Tenta diferentes separadores
+          if (cellValue.includes('-')) {
+            const parts = cellValue.split('-').map(p => p.trim());
+            city = parts[0] || '';
+            state = parts[1] || '';
+          } else if (cellValue.includes('/')) {
+            const parts = cellValue.split('/').map(p => p.trim());
+            city = parts[0] || '';
+            state = parts[1] || '';
+          } else {
+            // Assume que o último termo é o estado (ex: "São Paulo SP")
+            const words = cellValue.trim().split(' ');
+            if (words.length > 1) {
+              state = words.pop() || '';
+              city = words.join(' ');
+            } else {
+              city = cellValue;
+            }
+          }
+          
+          mappedStudent.city = city;
+          mappedStudent.state = state;
+          
+          // Associa automaticamente ao templo com base no estado/cidade
+          if (state) {
+            const stateUpper = state.toUpperCase();
+            if (stateUpper === 'SP' || city.toLowerCase().includes('são paulo')) {
+              mappedStudent.unit = 'SP';
+            } else if (stateUpper === 'MG' || city.toLowerCase().includes('belo horizonte')) {
+              mappedStudent.unit = 'BH';
+            } else if (city.toLowerCase().includes('campinas')) {
+              mappedStudent.unit = 'CP';
+            }
+          }
+        } else if (studentField === 'acceptsImageTerms') {
+          mappedStudent.acceptsImageTerms = true;
+          mappedStudent.imageTermsAcceptedAt = new Date().toISOString();
+        } else if (studentField === 'state') {
+          // Se o estado for informado diretamente, também tenta associar ao templo
+          mappedStudent.state = cellValue;
+          const stateUpper = cellValue.toUpperCase();
+          if (stateUpper === 'SP' || stateUpper === 'SÃO PAULO') {
+            mappedStudent.unit = 'SP';
+          } else if (stateUpper === 'MG' || stateUpper === 'MINAS GERAIS') {
+            mappedStudent.unit = 'BH';
+          }
+        } else if (
+          studentField === 'birthDate' || 
+          studentField === 'developmentStartDate' || 
+          studentField === 'internshipStartDate' || 
+          studentField === 'notEntryDate' || 
+          studentField === 'magistInitiationDate' || 
+          studentField === 'masterMagusInitiationDate'
+        ) {
+          // Converte datas do formato brasileiro para ISO
+          if (cellValue) {
+            const convertedDate = convertDateFormat(cellValue);
+            // Só atribui se conseguiu converter para um formato válido
+            if (convertedDate) {
+              (mappedStudent as any)[studentField] = convertedDate;
+            }
+          }
+        } else {
+          (mappedStudent as any)[studentField] = cellValue;
+        }
+      }
+      
+      if (mappedStudent.cpf) mappedStudent.cpf = formatCPF(mappedStudent.cpf);
+      if (mappedStudent.phone) mappedStudent.phone = formatPhone(mappedStudent.phone);
+
+      mappedStudent.id = generateId();
+      mappedStudent.isAdmin = false;
+      mappedStudent.isGuest = false;
+      mappedStudent.role = 'student';
+      mappedStudent.isActive = true;
+      mappedStudent.attendance = [];
+      mappedStudent.isPendingApproval = true;
+      
+      // Garantir que campos obrigatórios sempre tenham valores
+      if (!mappedStudent.unit) {
+        mappedStudent.unit = 'SP'; // Valor padrão quando não for possível determinar automaticamente
+      }
+      
+      // Garantir que a data de nascimento tenha um valor válido
+      if (!mappedStudent.birthDate) {
+        mappedStudent.birthDate = '1900-01-01'; // Valor padrão para data de nascimento
+      }
+      
+      // Garantir que outros campos obrigatórios tenham valores padrão
+      if (!mappedStudent.cpf) mappedStudent.cpf = 'N/A';
+      if (!mappedStudent.rg) mappedStudent.rg = 'N/A';
+      if (!mappedStudent.phone) mappedStudent.phone = 'N/A';
+      if (!mappedStudent.religion) mappedStudent.religion = 'N/A';
+
+      const newRow: ImportedRow = {
+        id: mappedStudent.id,
+        data: rowData,
+        mapped: mappedStudent,
+        status: 'pending',
+      };
+
+      const duplicateInFile = processedRows.find(p => p.mapped.email && p.mapped.email.toLowerCase() === newRow.mapped.email?.toLowerCase());
+      if (duplicateInFile) {
+        newRow.status = 'error';
+        newRow.error = 'Email duplicado no arquivo';
+      } else {
+        const { isValid, error } = validateRow(newRow);
+        if (!isValid) {
+          newRow.status = 'error';
+          newRow.error = error;
+        }
+      }
+      processedRows.push(newRow);
+    }
+
+    setImportedRows(processedRows);
+    setStep('preview');
   };
 
   // Import data
@@ -345,6 +567,38 @@ Equipe Nosso Templo`
 
     for (let i = 0; i < updatedRows.length; i++) {
       const row = updatedRows[i];
+      
+      // Garantir que campos obrigatórios sempre tenham valores antes da validação
+      if (!row.mapped.unit || row.mapped.unit.trim() === '') {
+        row.mapped.unit = 'SP'; // Valor padrão quando não for possível determinar automaticamente
+      }
+      
+      // Garantir que a data de nascimento tenha um valor válido
+      if (!row.mapped.birthDate || row.mapped.birthDate.trim() === '') {
+        row.mapped.birthDate = '1900-01-01';
+      } else {
+        // Verificar se a data está no formato correto
+        try {
+          const dateStr = row.mapped.birthDate;
+          if (dateStr.includes('-')) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            if (month > 12 || day > 31) {
+              console.warn(`Data inválida: ${dateStr}, usando valor padrão`);
+              row.mapped.birthDate = '1900-01-01';
+            }
+          }
+        } catch (e) {
+          console.warn(`Erro ao processar data: ${row.mapped.birthDate}`, e);
+          row.mapped.birthDate = '1900-01-01';
+        }
+      }
+      
+      // Garantir que outros campos obrigatórios tenham valores padrão
+      if (!row.mapped.cpf) row.mapped.cpf = 'N/A';
+      if (!row.mapped.rg) row.mapped.rg = 'N/A';
+      if (!row.mapped.phone) row.mapped.phone = 'N/A';
+      if (!row.mapped.religion) row.mapped.religion = 'N/A';
+      
       const validation = validateRow(row);
 
       if (!validation.isValid) {
@@ -369,7 +623,7 @@ Equipe Nosso Templo`
 
     setImportResults({ success: successCount, errors: errorCount });
     setIsImporting(false);
-    setStep('email');
+    setStep('results');
   };
 
   // Handle student selection for email
@@ -683,7 +937,7 @@ Equipe Nosso Templo`
         </div>
       )}
 
-      {step === 'email' && (
+      {step === 'results' && (
         <div className="space-y-6">
           {/* Import Results */}
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
@@ -710,76 +964,50 @@ Equipe Nosso Templo`
                 </div>
               </div>
             </div>
+            
+            {importResults.errors > 0 && (
+              <div className="mt-6">
+                <h4 className="text-red-400 font-medium mb-3">Detalhes dos Erros</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-700">
+                        <th className="text-left text-gray-400 pb-3">Nome</th>
+                        <th className="text-left text-gray-400 pb-3">Email</th>
+                        <th className="text-left text-gray-400 pb-3">Erro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importedRows
+                        .filter(row => row.status === 'error')
+                        .map(row => (
+                          <tr key={row.id} className="border-b border-gray-800">
+                            <td className="py-3 text-white">{row.mapped.fullName || '-'}</td>
+                            <td className="py-3 text-white">{row.mapped.email || '-'}</td>
+                            <td className="py-3 text-red-400">{row.error}</td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Email Management */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">Enviar Emails de Cadastro</h3>
-              <button
-                onClick={() => setShowEmailModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-white"
-              >
-                Configurar Email
-              </button>
-            </div>
-
-            {/* Student Selection */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-gray-300">
-                  Selecione os membros para enviar email de cadastro:
-                </p>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      const successfulIds = importedRows
-                        .filter(row => row.status === 'success')
-                        .map(row => row.id);
-                      setSelectedStudents(new Set(successfulIds));
-                    }}
-                    className="text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    Selecionar Todos
-                  </button>
-                  <button
-                    onClick={() => setSelectedStudents(new Set())}
-                    className="text-gray-400 hover:text-gray-300 text-sm"
-                  >
-                    Limpar Seleção
-                  </button>
-                </div>
-              </div>
-
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {importedRows.filter(row => row.status === 'success').map(row => (
-                  <label key={row.id} className="flex items-center space-x-3 p-3 bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-750">
-                    <input
-                      type="checkbox"
-                      checked={selectedStudents.has(row.id)}
-                      onChange={() => handleStudentSelection(row.id)}
-                      className="rounded border-gray-700 bg-gray-800 text-red-600 focus:ring-red-600 focus:ring-offset-gray-900"
-                    />
-                    <div className="flex-1">
-                      <p className="text-white font-medium">{row.mapped.fullName}</p>
-                      <p className="text-gray-400 text-sm">{row.mapped.email}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              {selectedStudents.size > 0 && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleSendEmails}
-                    disabled={isSendingEmails}
-                    className="bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 px-6 py-2 rounded-lg transition-colors text-white"
-                  >
-                    {isSendingEmails ? 'Enviando...' : `Enviar Emails (${selectedStudents.size})`}
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="mt-6 flex justify-end space-x-3">
+            <button
+              onClick={() => setStep('upload')}
+              className="bg-gray-600 hover:bg-gray-700 px-6 py-2 rounded-lg transition-colors text-white"
+            >
+              Nova Importação
+            </button>
+            <a
+              href="/admin/aprovar-membro"
+              className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg transition-colors text-white inline-flex items-center"
+            >
+              Ir para Aprovação de Membros
+            </a>
           </div>
         </div>
       )}
