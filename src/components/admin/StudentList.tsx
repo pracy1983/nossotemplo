@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Grid, List, Eye, Filter, Edit3, Save, X, Upload, Crop, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
+import { Search, Grid, List, Filter, Edit3, Save, X, Upload, Trash2, AlertTriangle, UserPlus } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student, ViewMode, FilterStatus, FilterUnit } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
@@ -11,7 +11,7 @@ interface StudentListProps {
 }
 
 const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => {
-  const { students, updateStudent, deleteStudent } = useData();
+  const { students, updateStudent, deleteStudent, turmas, temples } = useData();
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
@@ -22,6 +22,9 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
   const [formData, setFormData] = useState<Partial<Student>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [photo, setPhoto] = useState<string>('');
+
+  // Get all temples for the filter (from temples list, not just from students)
+  const uniqueUnits = [...new Set(temples.map(temple => temple.abbreviation))].sort();
 
   // Filter students based on search and filters
   const filteredStudents = students.filter(student => {
@@ -180,7 +183,7 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
         <div className="text-center">
           <h3 className="font-semibold text-white mb-1">{student.fullName}</h3>
           <p className="text-gray-400 text-sm">{DEFAULT_TEMPLES[student.unit as keyof typeof DEFAULT_TEMPLES]}</p>
-          <div className={`mt-2 px-3 py-1 rounded-full text-xs font-medium ${
+          <div className={`mt-2 w-44 text-center py-1 rounded-full text-xs font-medium ${
             student.isActive
               ? 'bg-green-600/20 text-green-400'
               : 'bg-red-600/20 text-red-400'
@@ -218,7 +221,7 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
       </div>
       
       {/* Status */}
-      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+      <div className={`w-20 text-center py-1 rounded-full text-xs font-medium ${
         student.isActive
           ? 'bg-green-600/20 text-green-400'
           : 'bg-red-600/20 text-red-400'
@@ -271,8 +274,9 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
               className="px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
             >
               <option value="all">Todas as Unidades</option>
-              <option value="SP">Templo SP</option>
-              <option value="BH">Templo BH</option>
+              {uniqueUnits.map(unit => (
+                  <option key={unit} value={unit}>{DEFAULT_TEMPLES[unit as keyof typeof DEFAULT_TEMPLES] || unit}</option>
+              ))}
             </select>
 
             <select
@@ -449,12 +453,10 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
               <div className="lg:col-span-2 space-y-6">
                 {/* Personal Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Informações Pessoais</h3>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Informações Pessoais</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Nome Completo *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Nome Completo</label>
                       {isEditing ? (
                         <input
                           type="text"
@@ -469,9 +471,7 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Email *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
                       {isEditing ? (
                         <div>
                           <input
@@ -497,9 +497,7 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Data de Nascimento *
-                      </label>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Data de Nascimento</label>
                       {isEditing ? (
                         <input
                           type="date"
@@ -636,7 +634,36 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
 
                 {/* Spiritual Development Dates */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Desenvolvimento Espiritual</h3>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Evolução</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Turma
+                      </label>
+                      {isEditing ? (
+                        <select
+                          value={formData.turmaId || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, turmaId: e.target.value }))}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        >
+                          <option value="">Não se aplica</option>
+                          {turmas.map(turma => (
+                            <option key={turma.id} value={turma.id}>
+                              Turma {turma.numero} - {DEFAULT_TEMPLES[turma.unit as keyof typeof DEFAULT_TEMPLES] || turma.unit}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-white">
+                          {selectedStudent.turmaId ? (
+                            turmas.find(t => t.id === selectedStudent.turmaId)?.numero
+                              ? `Turma ${turmas.find(t => t.id === selectedStudent.turmaId)?.numero} - ${DEFAULT_TEMPLES[turmas.find(t => t.id === selectedStudent.turmaId)?.unit as keyof typeof DEFAULT_TEMPLES] || turmas.find(t => t.id === selectedStudent.turmaId)?.unit}`
+                              : 'Turma não encontrada'
+                          ) : 'Não se aplica'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -728,7 +755,7 @@ const StudentList: React.FC<StudentListProps> = ({ onNavigateToAddStudent }) => 
                 
                 {/* Social Media */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Redes Sociais</h3>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Redes Sociais</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">

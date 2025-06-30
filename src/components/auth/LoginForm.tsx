@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Info, UserPlus } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const LoginForm: React.FC = () => {
@@ -47,17 +47,7 @@ const LoginForm: React.FC = () => {
     }
   };
 
-  const fillDemoCredentials = (type: 'admin' | 'student') => {
-    if (type === 'admin') {
-      setEmail('paularacy@gmail.com');
-      setPassword('adm@123');
-    } else {
-      setEmail('joao.silva@email.com');
-      setPassword('123456');
-    }
-    setError('');
-    setShowSetupInfo(false);
-  };
+
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-4">
@@ -169,44 +159,7 @@ const LoginForm: React.FC = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 pt-6 border-t border-gray-800">
-            <div className="bg-blue-600/10 border border-blue-600 rounded-lg p-4 mb-4">
-              <div className="flex items-start space-x-3">
-                <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-blue-400 text-sm font-medium mb-2">
-                    Credenciais para demonstração:
-                  </p>
-                  <p className="text-xs text-blue-300 mb-3">
-                    Clique nos botões abaixo para preencher automaticamente as credenciais de teste.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('admin')}
-                className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded transition-colors"
-              >
-                Admin Demo
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials('student')}
-                className="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded transition-colors"
-              >
-                Aluno Demo
-              </button>
-            </div>
-            
-            <div className="text-xs text-gray-400 space-y-1 mt-3">
-              <p><strong>Admin:</strong> paularacy@gmail.com</p>
-              <p><strong>Aluno:</strong> joao.silva@email.com</p>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

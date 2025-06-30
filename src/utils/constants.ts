@@ -26,7 +26,8 @@ export const EVENT_TYPES = {
 // Default temples - will be replaced by dynamic data
 export const DEFAULT_TEMPLES = {
   SP: 'Templo SP',
-  BH: 'Templo BH'
+  BH: 'Templo BH',
+  CP: 'Templo CP'
 } as const;
 
 export const USER_ROLES = {
