@@ -54,7 +54,12 @@ const StudentHistory: React.FC<StudentHistoryProps> = ({ student }) => {
       color: 'text-gold-400'
     }
   ].filter(event => event.date) // Only show events that have dates
-   .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+   .sort((a, b) => {
+     // Garantir que as datas existem antes de comparar
+     if (!a.date) return 1;
+     if (!b.date) return -1;
+     return new Date(a.date).getTime() - new Date(b.date).getTime();
+   });
 
   return (
     <div className="space-y-6">
@@ -93,7 +98,7 @@ const StudentHistory: React.FC<StudentHistoryProps> = ({ student }) => {
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-semibold text-white">{event.title}</h4>
                           <span className="text-sm text-gray-400">
-                            {formatDate(event.date!)}
+                            {event.date ? formatDate(event.date) : ''}
                           </span>
                         </div>
                         <p className="text-gray-300 text-sm">{event.description}</p>
@@ -122,13 +127,38 @@ const StudentHistory: React.FC<StudentHistoryProps> = ({ student }) => {
         <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
           <div className="flex items-center space-x-3 mb-2">
             <GraduationCap className="w-6 h-6 text-blue-400" />
-            <h3 className="text-lg font-semibold text-white">Tempo de Desenvolvimento</h3>
+            <h3 className="text-lg font-semibold text-white">Ativo a</h3>
           </div>
           <p className="text-2xl font-bold text-blue-400">
-            {student.developmentStartDate 
-              ? Math.floor((new Date().getTime() - new Date(student.developmentStartDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
-              : 0
-            } meses
+            {(() => {
+              if (!student.developmentStartDate) return "0 dias";
+              
+              const startDate = new Date(student.developmentStartDate);
+              const today = new Date();
+              
+              // Se o membro está inativo, não contamos o tempo desde a inativação
+              if (!student.isActive && student.inactiveSince) {
+                const inactiveDate = new Date(student.inactiveSince);
+                const activeDays = Math.floor((inactiveDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                
+                if (activeDays < 30) {
+                  return `${activeDays} dias`;
+                } else {
+                  const activeMonths = Math.floor(activeDays / 30);
+                  return `${activeMonths} ${activeMonths === 1 ? 'mês' : 'meses'}`;
+                }
+              }
+              
+              // Se está ativo, contamos até hoje
+              const activeDays = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+              
+              if (activeDays < 30) {
+                return `${activeDays} dias`;
+              } else {
+                const activeMonths = Math.floor(activeDays / 30);
+                return `${activeMonths} ${activeMonths === 1 ? 'mês' : 'meses'}`;
+              }
+            })()}
           </p>
         </div>
 

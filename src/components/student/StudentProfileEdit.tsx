@@ -359,6 +359,171 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
               </div>
             </div>
           </div>
+
+          {/* Spiritual Development Dates */}
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <h3 className="text-lg font-semibold text-white mb-4">Datas de Desenvolvimento Espiritual</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Data de Início de Desenvolvimento
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.developmentStartDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, developmentStartDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.developmentStartDate ? formatDate(student.developmentStartDate) : 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Data de Início do Estágio
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.internshipStartDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, internshipStartDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.internshipStartDate ? formatDate(student.internshipStartDate) : 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Data de Iniciação como Magista
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.magistInitiationDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, magistInitiationDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.magistInitiationDate ? formatDate(student.magistInitiationDate) : 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Data de Entrada na N.O.T.
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.notEntryDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notEntryDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.notEntryDate ? formatDate(student.notEntryDate) : 'Não informado'}</p>
+                )}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Data de Iniciação como Mestre Mago
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.masterMagusInitiationDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, masterMagusInitiationDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.masterMagusInitiationDate ? formatDate(student.masterMagusInitiationDate) : 'Não informado'}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Social Media and Additional Information */}
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <h3 className="text-lg font-semibold text-white mb-4">Informações Adicionais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Instagram Pessoal
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.instagramPersonal || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, instagramPersonal: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.instagramPersonal || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Instagram Mágicko
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.instagramMagicko || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, instagramMagicko: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.instagramMagicko || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Como conheceu o templo
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.howFoundTemple || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, howFoundTemple: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.howFoundTemple || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Termos de uso de imagem
+                </label>
+                {isEditing ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.acceptsImageTerms || false}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        acceptsImageTerms: e.target.checked,
+                        imageTermsAcceptedAt: e.target.checked ? new Date().toISOString() : undefined
+                      }))}
+                      className="w-5 h-5 bg-gray-800 border border-gray-700 rounded text-red-600 focus:ring-red-600"
+                    />
+                    <span className="text-white">Aceito os termos de uso de imagem</span>
+                  </div>
+                ) : (
+                  <p className="text-white">
+                    {student.acceptsImageTerms && student.imageTermsAcceptedAt ? 'Aceito em ' + formatDate(student.imageTermsAcceptedAt) : student.acceptsImageTerms ? 'Aceito' : 'Não aceito'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Users, TrendingUp, Clock, MapPin, Filter, Eye } from 'lucide-react';
+import { Calendar, Users, TrendingUp, Clock, MapPin, Filter, Eye, CheckCircle, CreditCard } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student, Event } from '../../types';
 import { DEFAULT_TEMPLES, EVENT_TYPES } from '../../utils/constants';
@@ -11,7 +11,9 @@ interface StudentDashboardProps {
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
   const { events, turmas, temples } = useData();
-  const [filterUnit, setFilterUnit] = useState(student.unit);
+  const [filterUnit, setFilterUnit] = useState<string>('all');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showEventDetails, setShowEventDetails] = useState<boolean>(false);
 
   // Get student's current status and progress
   const getCurrentStatus = () => {
@@ -268,50 +270,39 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
         </div>
 
         {upcomingEvents.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {upcomingEvents.map(event => {
               const eventType = EVENT_TYPES[event.type as keyof typeof EVENT_TYPES];
               const temple = temples.find(t => t.abbreviation === event.unit);
               const templeName = temple ? `${temple.name} (${temple.city})` : `Templo ${event.unit}`;
               
               return (
-                <div key={event.id} className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <div 
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: event.color || '#8B5CF6' }}
-                        />
-                        <h4 className="font-medium text-white">{event.title}</h4>
-                        <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
-                          {eventType?.label || 'Outro'}
-                        </span>
-                      </div>
-                      
-                      <div className="text-sm text-gray-400 space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatDate(event.date)} às {event.time}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="w-4 h-4" />
-                          <span>{event.location} - {templeName}</span>
-                        </div>
-                      </div>
-                      
-                      {event.description && (
-                        <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                          {event.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="ml-4">
-                      <div className="text-right text-sm text-gray-400">
-                        {event.attendees.length} participantes
+                <div 
+                  key={event.id} 
+                  className="bg-gray-800 rounded-lg p-3 hover:bg-gray-750 transition-colors cursor-pointer flex items-center justify-between"
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setShowEventDetails(true);
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: event.color || '#8B5CF6' }}
+                    />
+                    <div>
+                      <h4 className="font-medium text-white">{event.title}</h4>
+                      <div className="text-xs text-gray-400">
+                        {formatDate(event.date)} às {event.time}
                       </div>
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                      {eventType?.label || 'Outro'}
+                    </span>
+                    <Eye className="w-4 h-4 text-gray-400" />
                   </div>
                 </div>
               );
@@ -329,6 +320,84 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
           </div>
         )}
       </div>
+
+      {/* Event Details Modal */}
+      {showEventDetails && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-white">{selectedEvent.title}</h3>
+              <button 
+                onClick={() => setShowEventDetails(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                  {EVENT_TYPES[selectedEvent.type as keyof typeof EVENT_TYPES]?.label || 'Outro'}
+                </span>
+              </div>
+              
+              <div className="text-sm text-gray-400 space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4" />
+                  <span>{formatDate(selectedEvent.date)} às {selectedEvent.time}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>
+                    {selectedEvent.location} - 
+                    {(() => {
+                      const temple = temples.find(t => t.abbreviation === selectedEvent.unit);
+                      return temple ? `${temple.name} (${temple.city})` : `Templo ${selectedEvent.unit}`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+              
+              {selectedEvent.description && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-300 mb-2">Descrição</h4>
+                  <p className="text-sm text-gray-400">{selectedEvent.description}</p>
+                </div>
+              )}
+              
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-300 mb-2">Participantes</h4>
+                <p className="text-sm text-gray-400">{selectedEvent.attendees.length} participantes confirmados</p>
+              </div>
+              
+              <div className="flex space-x-4 mt-6">
+                <button 
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2"
+                  onClick={() => {
+                    // Lógica para marcar presença será implementada posteriormente
+                    alert('Presença marcada com sucesso!');
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Marcar Presença</span>
+                </button>
+                
+                <button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={true} // Será habilitado quando implementarmos a funcionalidade de pagamento
+                  onClick={() => {
+                    // Lógica para pagamento será implementada posteriormente
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Pagar Agora</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

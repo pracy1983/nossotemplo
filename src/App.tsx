@@ -1,14 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import LoginForm from './components/auth/LoginForm';
 import AdminPanel from './components/admin/AdminPanel';
 import StudentProfile from './components/student/StudentProfile';
 import Layout from './components/common/Layout';
+import { checkSupabaseConnection } from './utils/checkConnection';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { loading: dataLoading, error: dataError } = useData();
+  const [connectionStatus, setConnectionStatus] = useState<{success: boolean; message: string; details?: any}>({ success: false, message: 'Verificando conexão...' });
+  const [isCheckingConnection, setIsCheckingConnection] = useState<boolean>(false);
+
+  // Verificar conexão com o Supabase
+  const verifyConnection = async () => {
+    setIsCheckingConnection(true);
+    try {
+      const result = await checkSupabaseConnection();
+      setConnectionStatus({
+        success: result.success,
+        message: result.message,
+        details: result.success ? result.data : result.error
+      });
+    } catch (error) {
+      setConnectionStatus({
+        success: false,
+        message: `Erro ao verificar conexão: ${error instanceof Error ? error.message : String(error)}`,
+        details: error
+      });
+    } finally {
+      setIsCheckingConnection(false);
+    }
+  };
 
   if (isLoading || dataLoading) {
     return (
@@ -31,12 +55,38 @@ const AppContent: React.FC = () => {
             <p className="text-gray-400 text-sm">
               Verifique se o Supabase está configurado corretamente e tente novamente.
             </p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors text-white"
-            >
-              Tentar Novamente
-            </button>
+            <div className="mt-4 flex flex-col space-y-2">
+              <button 
+                onClick={verifyConnection} 
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors text-white flex items-center justify-center"
+                disabled={isCheckingConnection}
+              >
+                {isCheckingConnection ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Verificando...
+                  </>
+                ) : 'Verificar Conexão'}
+              </button>
+              
+              {connectionStatus.message && (
+                <div className={`mt-2 p-3 rounded-lg text-sm text-left ${connectionStatus.success ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}`}>
+                  <p className="font-medium">{connectionStatus.message}</p>
+                  {connectionStatus.details && (
+                    <pre className="mt-2 overflow-x-auto text-xs opacity-80">
+                      {JSON.stringify(connectionStatus.details, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+              
+              <button 
+                onClick={() => window.location.reload()} 
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors text-white"
+              >
+                Recarregar Página
+              </button>
+            </div>
           </div>
         </div>
       </div>
