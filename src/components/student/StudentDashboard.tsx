@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Users, TrendingUp, Clock, MapPin, Filter, Eye, CheckCircle, CreditCard } from 'lucide-react';
+import { Calendar, Users, TrendingUp, Clock, MapPin, Filter, Eye, CheckCircle, CreditCard, GraduationCap, Star, Award } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student, Event } from '../../types';
 import { DEFAULT_TEMPLES, EVENT_TYPES } from '../../utils/constants';
@@ -11,9 +11,11 @@ interface StudentDashboardProps {
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
   const { events, turmas, temples } = useData();
-  const [filterUnit, setFilterUnit] = useState<string>('all');
+  const [filterUnit, setFilterUnit] = useState<string>(student.unit || 'all');
+  const [filterEventType, setFilterEventType] = useState<string>('all');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDetails, setShowEventDetails] = useState<boolean>(false);
+  const [showAllEvents, setShowAllEvents] = useState<boolean>(false);
 
   // Get student's current status and progress
   const getCurrentStatus = () => {
@@ -81,11 +83,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return events.filter(event => {
+    const filtered = events.filter(event => {
       const eventDate = new Date(event.date);
       eventDate.setHours(0, 0, 0, 0);
-      return eventDate >= today && event.unit === filterUnit;
-    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5);
+      const unitMatch = filterUnit === 'all' || event.unit === filterUnit;
+      const typeMatch = filterEventType === 'all' || event.type === filterEventType;
+      return eventDate >= today && unitMatch && typeMatch;
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    return showAllEvents ? filtered : filtered.slice(0, 5);
   };
 
   const currentStatus = getCurrentStatus();
@@ -120,7 +126,53 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
           />
           
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white mb-2">{student.fullName}</h2>
+            <div className="flex items-center mb-2">
+              <h2 className="text-2xl font-bold text-white">{student.fullName}</h2>
+              
+              {/* Achievement Badges */}
+              <div className="flex ml-3 space-x-1">
+                {student.developmentStartDate && (
+                  <div className="relative group">
+                    <GraduationCap className="w-5 h-5 text-blue-400" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Início do Desenvolvimento Mágicko
+                    </div>
+                  </div>
+                )}
+                {student.internshipStartDate && (
+                  <div className="relative group">
+                    <Clock className="w-5 h-5 text-yellow-400" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Estágio
+                    </div>
+                  </div>
+                )}
+                {student.magistInitiationDate && (
+                  <div className="relative group">
+                    <Star className="w-5 h-5 text-purple-400" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Iniciado como Magista
+                    </div>
+                  </div>
+                )}
+                {student.notEntryDate && (
+                  <div className="relative group">
+                    <Award className="w-5 h-5 text-red-400" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Membro da N.O.T.
+                    </div>
+                  </div>
+                )}
+                {student.masterMagusInitiationDate && (
+                  <div className="relative group">
+                    <Award className="w-5 h-5 text-gold-400" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-xs text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Mestre Mago
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             
             <div className="flex items-center space-x-4 mb-3">
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${currentStatus.color} bg-gray-800`}>
@@ -254,18 +306,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
           </div>
           
           <div className="flex items-center space-x-3">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <select
-              value={filterUnit}
-              onChange={(e) => setFilterUnit(e.target.value)}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-red-600 focus:ring-1 focus:ring-red-600"
-            >
-              {allTempleOptions.map(temple => (
-                <option key={temple.value} value={temple.value}>
-                  {temple.label}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <select
+                value={filterUnit}
+                onChange={(e) => setFilterUnit(e.target.value)}
+                className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-red-600 focus:ring-1 focus:ring-red-600"
+              >
+                <option value="all">Todos os Templos</option>
+                {allTempleOptions.map(temple => (
+                  <option key={temple.value} value={temple.value}>
+                    {temple.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <select
+                value={filterEventType}
+                onChange={(e) => setFilterEventType(e.target.value)}
+                className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:border-red-600 focus:ring-1 focus:ring-red-600"
+              >
+                <option value="all">Todos os Tipos</option>
+                <option value="desenvolvimento-magicko">Desenvolvimento</option>
+                <option value="rito-aberto">Rito Aberto</option>
+                <option value="ritual-coletivo">Rito Coletivo</option>
+                <option value="workshop">Workshop</option>
+                <option value="outro">Outros</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -273,8 +343,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
           <div className="space-y-2">
             {upcomingEvents.map(event => {
               const eventType = EVENT_TYPES[event.type as keyof typeof EVENT_TYPES];
-              const temple = temples.find(t => t.abbreviation === event.unit);
-              const templeName = temple ? `${temple.name} (${temple.city})` : `Templo ${event.unit}`;
               
               return (
                 <div 
@@ -307,6 +375,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student }) => {
                 </div>
               );
             })}
+            
+            <div className="mt-4 text-center">
+              <button 
+                onClick={() => setShowAllEvents(!showAllEvents)}
+                className="text-sm text-red-400 hover:text-red-300 flex items-center justify-center mx-auto"
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                {showAllEvents ? 'Mostrar menos' : 'Ver todos os eventos'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-8">

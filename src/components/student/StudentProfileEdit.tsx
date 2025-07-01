@@ -362,13 +362,13 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
 
           {/* Spiritual Development Dates */}
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-semibold text-white mb-4">Datas de Desenvolvimento Espiritual</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">Histórico</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Início de Desenvolvimento
                 </label>
-                {isEditing ? (
+                {isEditing && (student.role === 'admin' || student.role === 'collaborator') ? (
                   <input
                     type="date"
                     value={formData.developmentStartDate || ''}
@@ -384,7 +384,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Início do Estágio
                 </label>
-                {isEditing ? (
+                {isEditing && (student.role === 'admin' || student.role === 'collaborator') ? (
                   <input
                     type="date"
                     value={formData.internshipStartDate || ''}
@@ -400,7 +400,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Iniciação como Magista
                 </label>
-                {isEditing ? (
+                {isEditing && (student.role === 'admin' || student.role === 'collaborator') ? (
                   <input
                     type="date"
                     value={formData.magistInitiationDate || ''}
@@ -416,7 +416,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Entrada na N.O.T.
                 </label>
-                {isEditing ? (
+                {isEditing && (student.role === 'admin' || student.role === 'collaborator') ? (
                   <input
                     type="date"
                     value={formData.notEntryDate || ''}
@@ -432,7 +432,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Iniciação como Mestre Mago
                 </label>
-                {isEditing ? (
+                {isEditing && (student.role === 'admin' || student.role === 'collaborator') ? (
                   <input
                     type="date"
                     value={formData.masterMagusInitiationDate || ''}
@@ -502,7 +502,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Termos de uso de imagem
                 </label>
-                {isEditing ? (
+                {isEditing && !student.acceptsImageTerms ? (
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
@@ -518,7 +518,9 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                   </div>
                 ) : (
                   <p className="text-white">
-                    {student.acceptsImageTerms && student.imageTermsAcceptedAt ? 'Aceito em ' + formatDate(student.imageTermsAcceptedAt) : student.acceptsImageTerms ? 'Aceito' : 'Não aceito'}
+                    {student.acceptsImageTerms || formData.acceptsImageTerms ? 
+                      <span className="text-green-400 font-medium">Aceitou os termos de uso de imagem {student.imageTermsAcceptedAt ? ' em ' + formatDate(student.imageTermsAcceptedAt) : ''}</span> : 
+                      'Não aceito'}
                   </p>
                 )}
               </div>
