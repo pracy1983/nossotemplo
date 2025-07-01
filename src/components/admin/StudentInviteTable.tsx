@@ -119,7 +119,8 @@ const StudentInviteTable: React.FC<StudentInviteTableProps> = ({
                       <Eye size={18} />
                     </button>
                     
-                    {student.inviteStatus === 'pending' && onResendEmail && (
+                    {/* Botões de ação - agora visíveis para todos os registros */}
+                    {onResendEmail && (
                       <>
                         <button
                           onClick={() => onResendEmail(student.id)}
@@ -132,7 +133,7 @@ const StudentInviteTable: React.FC<StudentInviteTableProps> = ({
                           onClick={() => {
                             // Gerar link e copiar para o clipboard
                             const baseUrl = window.location.origin;
-                            const inviteLink = `${baseUrl}/convite/${student.inviteToken}`;
+                            const inviteLink = `${baseUrl}/invite/${student.inviteToken}`;
                             navigator.clipboard.writeText(inviteLink);
                             alert('Link copiado para a área de transferência!');
                           }}
@@ -144,30 +145,28 @@ const StudentInviteTable: React.FC<StudentInviteTableProps> = ({
                       </>
                     )}
                     
-                    {student.inviteStatus === 'pending' && onApprove && (
+                    {onApprove && (
                       <button
                         onClick={() => onApprove(student.id)}
                         className="p-1 text-gray-400 hover:text-green-400 focus:outline-none"
-                        title="Aprovar membro"
+                        title="Aprovar"
                       >
                         <CheckCircle size={18} />
                       </button>
                     )}
                     
-                    {student.inviteStatus !== 'rejected' && (
-                      <button
-                        onClick={() => onReject(student.id)}
-                        className="p-1 text-gray-400 hover:text-red-400 focus:outline-none"
-                        title="Rejeitar membro"
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => onReject(student.id)}
+                      className="p-1 text-gray-400 hover:text-red-400 focus:outline-none"
+                      title="Rejeitar"
+                    >
+                      <X size={18} />
+                    </button>
                     
                     <button
                       onClick={() => onDelete(student.id)}
                       className="p-1 text-gray-400 hover:text-red-400 focus:outline-none"
-                      title="Excluir permanentemente"
+                      title="Excluir"
                     >
                       <Trash2 size={18} />
                     </button>

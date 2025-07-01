@@ -1,7 +1,8 @@
 import { Student } from '../types';
 
 // Verificar se estamos em ambiente de produção (Netlify)
-const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
+// Forçando como true para garantir que o email seja enviado corretamente em produção
+const isProduction = true;
 
 // Serviço de email simulado para ambiente de desenvolvimento
 const mockEmailService = {
