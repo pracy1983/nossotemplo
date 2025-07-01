@@ -208,7 +208,8 @@ export const sendCustomEmail = async (
 export const generateInviteLink = (token: string): string => {
   // Usar o origin da janela atual ou um fallback para desenvolvimento local
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-  return `${baseUrl}/convite/${token}`;
+  // Corrigindo a rota para a que realmente existe na aplicação
+  return `${baseUrl}/invite/${token}`;
 };
 
 /**
