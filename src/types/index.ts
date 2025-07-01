@@ -35,7 +35,7 @@ export interface Student {
   turmaId?: string; // Reference to Turma ID
   // Invite and approval fields
   isPendingApproval?: boolean;
-  inviteStatus?: 'pending' | 'accepted' | 'expired';
+  inviteStatus?: 'pending' | 'accepted' | 'expired' | 'rejected';
   inviteToken?: string;
   invitedAt?: string;
   invitedBy?: string;
@@ -46,6 +46,12 @@ export interface Student {
   // Social media fields
   instagramPersonal?: string; // Instagram Pessoal
   instagramMagicko?: string; // Instagram Mágicko
+  
+  // Additional fields
+  rejectReason?: string; // Motivo da rejeição
+  termsAccepted?: boolean; // Termos de uso aceitos
+  imageTermsAccepted?: boolean; // Termos de imagem aceitos
+  profileImage?: string; // URL da imagem de perfil
 }
 
 export interface Event {
