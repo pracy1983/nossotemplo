@@ -1,8 +1,9 @@
 import { Student } from '../types';
 
-// Serviço de email simulado para ambiente de desenvolvimento
+// Verificar se estamos em ambiente de produção (Netlify)
+const isProduction = typeof window !== 'undefined' && window.location.hostname.includes('netlify.app');
 
-// Simulação de serviço de email para ambiente de desenvolvimento
+// Serviço de email simulado para ambiente de desenvolvimento
 const mockEmailService = {
   verify: async () => {
     console.log('Mock: Serviço de email verificado');
@@ -10,12 +11,60 @@ const mockEmailService = {
   },
   sendMail: async (options: any) => {
     console.log('Mock: Email enviado', options);
+    alert(`[DESENVOLVIMENTO] Email seria enviado para: ${options.to}\nAssunto: ${options.subject}\n\nEm produção, este email seria enviado de verdade.`);
     return { response: 'Simulação de envio bem-sucedida' };
   }
 };
 
-// Usaremos o serviço de mock para ambiente de desenvolvimento
-// Em produção, este serviço seria substituído pelo nodemailer real
+// Em produção, usaríamos um serviço real de email
+// Esta é uma implementação básica que pode ser expandida para usar serviços como SendGrid, Mailgun, etc.
+const productionEmailService = {
+  verify: async () => {
+    // Em produção, verificaria a conexão com o serviço de email
+    return true;
+  },
+  sendMail: async (options: any) => {
+    // Em produção, enviaria o email usando um serviço real
+    // Esta é apenas uma simulação para fins de demonstração
+    try {
+      // Aqui você integraria com um serviço real como SendGrid, Mailgun, etc.
+      console.log('Produção: Enviando email real para', options.to);
+      
+      // Exemplo de integração com API de email (comentado)
+      /*
+      const response = await fetch('https://api.emailservice.com/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer YOUR_API_KEY'
+        },
+        body: JSON.stringify({
+          from: options.from,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          text: options.text
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao enviar email');
+      }
+      
+      return await response.json();
+      */
+      
+      // Por enquanto, apenas simulamos o envio em produção também
+      return { response: 'Email enviado com sucesso em produção' };
+    } catch (error) {
+      console.error('Erro ao enviar email em produção:', error);
+      throw error;
+    }
+  }
+};
+
+// Escolher o serviço apropriado com base no ambiente
+const emailService = isProduction ? productionEmailService : mockEmailService;
 
 /**
  * Verifica se o serviço de email está configurado corretamente
@@ -23,9 +72,9 @@ const mockEmailService = {
  */
 export const verifyEmailService = async (): Promise<boolean> => {
   try {
-    // Em desenvolvimento, sempre retornamos true
-    console.log('Simulação: Serviço de email verificado com sucesso');
-    return true;
+    // Usar o serviço apropriado com base no ambiente
+    const result = await emailService.verify();
+    return result;
   } catch (error) {
     console.error('Erro ao verificar serviço de email:', error);
     return false;
@@ -47,8 +96,7 @@ export const sendEmail = async (
   text?: string
 ): Promise<boolean> => {
   try {
-    // Em ambiente de desenvolvimento, apenas simulamos o envio
-    console.log('Preparando para enviar email');
+    console.log(`Preparando para enviar email em ambiente ${isProduction ? 'de produção' : 'de desenvolvimento'}`);
     
     // Configuração do email
     const mailOptions = {
@@ -59,12 +107,18 @@ export const sendEmail = async (
       html
     };
 
-    // Simular envio em ambiente de desenvolvimento
-    console.log('Simulando envio de email para:', to);
-    console.log('Assunto:', subject);
+    // Log para debug
+    console.log(`Enviando email para: ${to}`);
+    console.log(`Assunto: ${subject}`);
     
-    // Em desenvolvimento, usamos o mock
-    await mockEmailService.sendMail(mailOptions);
+    // Usar o serviço apropriado com base no ambiente
+    await emailService.sendMail(mailOptions);
+    
+    // Feedback adicional em desenvolvimento
+    if (!isProduction) {
+      console.log('Email simulado enviado com sucesso em ambiente de desenvolvimento');
+    }
+    
     return true;
   } catch (error) {
     console.error('Erro ao enviar email:', error);

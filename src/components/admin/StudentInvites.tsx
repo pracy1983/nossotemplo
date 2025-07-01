@@ -368,9 +368,15 @@ const StudentInvites: React.FC = () => {
       
       // Mostrar feedback
       alert(`Convite enviado com sucesso para ${inviteForm.fullName}!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao criar convite:', error);
-      alert('Erro ao criar convite. Tente novamente.');
+      
+      // Tratamento específico para erro de email já existente
+      if (error.message && error.message.includes('existe um aluno com este email')) {
+        alert(`Erro: Já existe um aluno cadastrado com o email ${inviteForm.email}. Por favor, use outro email ou reenvie o convite para o aluno existente.`);
+      } else {
+        alert(`Erro ao criar convite: ${error.message || 'Tente novamente.'}`);
+      }
     }
   };
   

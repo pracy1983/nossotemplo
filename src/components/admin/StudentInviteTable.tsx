@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckSquare, Square, Eye, X, Trash2, Mail, CheckCircle } from 'lucide-react';
+import { CheckSquare, Square, Eye, X, Trash2, Mail, CheckCircle, Copy } from 'lucide-react';
 import { Student } from '../../types';
 
 interface StudentInviteTableProps {
@@ -120,13 +120,28 @@ const StudentInviteTable: React.FC<StudentInviteTableProps> = ({
                     </button>
                     
                     {student.inviteStatus === 'pending' && onResendEmail && (
-                      <button
-                        onClick={() => onResendEmail(student.id)}
-                        className="p-1 text-gray-400 hover:text-green-400 focus:outline-none"
-                        title="Reenviar email/gerar link"
-                      >
-                        <Mail size={18} />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => onResendEmail(student.id)}
+                          className="p-1 text-gray-400 hover:text-green-400 focus:outline-none"
+                          title="Reenviar email"
+                        >
+                          <Mail size={18} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Gerar link e copiar para o clipboard
+                            const baseUrl = window.location.origin;
+                            const inviteLink = `${baseUrl}/convite/${student.inviteToken}`;
+                            navigator.clipboard.writeText(inviteLink);
+                            alert('Link copiado para a área de transferência!');
+                          }}
+                          className="p-1 text-gray-400 hover:text-blue-400 focus:outline-none"
+                          title="Copiar link de convite"
+                        >
+                          <Copy size={18} />
+                        </button>
+                      </>
                     )}
                     
                     {student.inviteStatus === 'pending' && onApprove && (
