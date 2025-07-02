@@ -1,5 +1,6 @@
 import { Student } from '../types';
-import emailjs from '@emailjs/browser';
+// Importamos o nodemailer para envio de emails via SMTP
+import nodemailer from 'nodemailer';
 
 // Verificar se estamos em ambiente de produção (Netlify)
 // Detectar automaticamente se estamos em produção ou desenvolvimento
@@ -18,27 +19,34 @@ const mockEmailService = {
   }
 };
 
-// Configuração do EmailJS para produção
-// Substitua estes valores pelos seus IDs do EmailJS
-const EMAILJS_SERVICE_ID = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_default';
-const EMAILJS_TEMPLATE_ID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_default';
-const EMAILJS_USER_ID = process.env.REACT_APP_EMAILJS_USER_ID || 'user_default';
+// Configuração do servidor SMTP
+const SMTP_HOST = 'mail.aprendamagia.com.br';
+const SMTP_PORT = 465;
+const SMTP_USER = 'nossotemplo@aprendamagia.com.br';
+const SMTP_PASS = '=Xh%fWTEa~&H';
+const SMTP_FROM = '"Nosso Templo" <nossotemplo@aprendamagia.com.br>';
 
-// Inicializar EmailJS
-if (isProduction) {
-  emailjs.init(EMAILJS_USER_ID);
-}
+// Criar o transportador SMTP para envio de emails
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: true, // true para porta 465
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS
+    }
+  });
+};
 
-// Serviço real de email para produção usando EmailJS
+// Serviço real de email para produção usando SMTP
 const productionEmailService = {
   verify: async () => {
     try {
-      console.log('Verificando configuração do EmailJS...');
-      // Verificar se temos as configurações necessárias
-      if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_USER_ID) {
-        console.error('Configurações do EmailJS incompletas');
-        return false;
-      }
+      console.log('Verificando configuração do servidor SMTP...');
+      const transporter = createTransporter();
+      const verification = await transporter.verify();
+      console.log('Verificação do servidor SMTP:', verification);
       return true;
     } catch (error) {
       console.error('Erro ao verificar serviço de email:', error);
@@ -49,30 +57,28 @@ const productionEmailService = {
     try {
       console.log('Produção: Enviando email real para', options.to);
       
-      // Preparar os parâmetros para o EmailJS
-      const templateParams = {
-        to_email: options.to,
-        to_name: options.to.split('@')[0], // Nome básico extraído do email
-        from_name: 'Nosso Templo',
+      // Criar o transportador SMTP
+      const transporter = createTransporter();
+      
+      // Configurar opções do email
+      const mailOptions = {
+        from: options.from || SMTP_FROM,
+        to: options.to,
         subject: options.subject,
-        message_html: options.html,
-        message_text: options.text || '',
-        reply_to: 'nossotemplo@aprendamagia.com.br'
+        text: options.text || '',
+        html: options.html
       };
       
-      // Enviar o email usando EmailJS
-      const response = await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams
-      );
+      // Enviar o email
+      const info = await transporter.sendMail(mailOptions);
       
-      console.log('Email enviado com sucesso:', response);
+      console.log('Email enviado com sucesso:', info);
       alert(`Email enviado com sucesso para: ${options.to}`);
-      return response;
+      return info;
     } catch (error) {
       console.error('Erro ao enviar email em produção:', error);
-      alert(`Erro ao enviar email para: ${options.to}. Verifique o console para mais detalhes.`);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`Erro ao enviar email para: ${options.to}. Erro: ${errorMessage}`);
       throw error;
     }
   }
