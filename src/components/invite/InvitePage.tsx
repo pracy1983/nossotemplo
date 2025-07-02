@@ -1,25 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../services/supabaseClient';
 import { Student } from '../../types';
-import { CheckCircle, XCircle, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+// Criando cliente Supabase diretamente
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
+const supabaseKey = process.env.REACT_APP_SUPABASE_KEY || 'your-supabase-key';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface InvitePageProps {
   token?: string;
 }
 
 const InvitePage: React.FC<InvitePageProps> = ({ token }) => {
+  const { login } = useAuth();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [student, setStudent] = useState<Partial<Student> | null>(null);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
     birthDate: '',
+    password: '',
+    confirmPassword: '',
     termsAccepted: false,
     imageTermsAccepted: false,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const verifyToken = async () => {
@@ -92,6 +104,53 @@ const InvitePage: React.FC<InvitePageProps> = ({ token }) => {
     });
   };
 
+  // Função para validar email
+  const validateEmail = (email: string): boolean => {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(email);
+  };
+
+  const validateInviteForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Nome completo é obrigatório';
+    }
+    
+    if (!formData.email) {
+      newErrors.email = 'Email é obrigatório';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Email inválido';
+    }
+    
+    if (!formData.phone) {
+      newErrors.phone = 'Telefone é obrigatório';
+    }
+    
+    if (!formData.birthDate) {
+      newErrors.birthDate = 'Data de nascimento é obrigatória';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Senha é obrigatória';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'A senha deve ter pelo menos 6 caracteres';
+    }
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'As senhas não coincidem';
+    }
+    
+    if (!formData.termsAccepted) {
+      newErrors.termsAccepted = 'Você precisa aceitar os termos de uso';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -101,13 +160,24 @@ const InvitePage: React.FC<InvitePageProps> = ({ token }) => {
         throw new Error('Dados do estudante não encontrados.');
       }
 
-      // Validar dados obrigatórios
-      if (!formData.fullName || !formData.email || !formData.phone || !formData.birthDate) {
-        throw new Error('Por favor, preencha todos os campos obrigatórios.');
+      if (!validateInviteForm()) {
+        setLoading(false);
+        return;
       }
 
-      if (!formData.termsAccepted) {
-        throw new Error('Você precisa aceitar os termos de uso para continuar.');
+      // Criar usuário no Supabase Auth
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+          }
+        }
+      });
+
+      if (signUpError) {
+        throw new Error('Erro ao criar conta: ' + signUpError.message);
       }
 
       // Atualizar o registro do estudante
@@ -129,7 +199,18 @@ const InvitePage: React.FC<InvitePageProps> = ({ token }) => {
         throw new Error('Erro ao aceitar convite: ' + error.message);
       }
 
-      setSuccess(true);
+      // Fazer login automático
+      const loginSuccess = await login(formData.email, formData.password);
+      
+      if (!loginSuccess) {
+        // Se o login falhar, ainda consideramos o cadastro como sucesso
+        console.error('Erro ao fazer login automático');
+        setSuccess(true);
+      } else {
+        // Redirecionar para a página de edição de perfil
+        window.location.href = '/profile/edit';
+      }
+
       setLoading(false);
     } catch (err) {
       console.error('Erro ao aceitar convite:', err);
@@ -262,6 +343,57 @@ const InvitePage: React.FC<InvitePageProps> = ({ token }) => {
               className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
+          </div>
+          
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
+              Senha *
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Mínimo 6 caracteres"
+                required
+              />
+              <button 
+                type="button" 
+                className="absolute right-2 top-2.5 text-gray-400 hover:text-white"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password}</p>}
+          </div>
+          
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
+              Confirmar Senha *
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Repita sua senha"
+                required
+              />
+              <button 
+                type="button" 
+                className="absolute right-2 top-2.5 text-gray-400 hover:text-white"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           
           <div className="flex items-start mt-6">
