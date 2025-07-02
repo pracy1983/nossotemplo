@@ -128,9 +128,11 @@ function App() {
   
   if (isInvitePath) {
     return (
-      <DataProvider>
-        <InviteHandler />
-      </DataProvider>
+      <AuthProvider>
+        <DataProvider>
+          <InviteHandler />
+        </DataProvider>
+      </AuthProvider>
     );
   }
   
