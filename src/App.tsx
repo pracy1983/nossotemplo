@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import LoginForm from './components/auth/LoginForm';
 import AdminPanel from './components/admin/AdminPanel';
 import StudentProfile from './components/student/StudentProfile';
 import Layout from './components/common/Layout';
+import InvitePage from './components/invite/InvitePage';
 import { checkSupabaseConnection } from './utils/checkConnection';
 
 const AppContent: React.FC = () => {
@@ -112,7 +113,27 @@ const AppContent: React.FC = () => {
   );
 };
 
+// Componente para extrair o token da URL
+const InviteHandler: React.FC = () => {
+  const path = window.location.pathname;
+  const tokenMatch = path.match(/\/invite\/([\w-]+)/);
+  const token = tokenMatch ? tokenMatch[1] : undefined;
+  
+  return <InvitePage token={token} />;
+};
+
 function App() {
+  // Verificar se estamos na rota de convite
+  const isInvitePath = window.location.pathname.startsWith('/invite/');
+  
+  if (isInvitePath) {
+    return (
+      <DataProvider>
+        <InviteHandler />
+      </DataProvider>
+    );
+  }
+  
   return (
     <AuthProvider>
       <DataProvider>

@@ -653,7 +653,7 @@ Equipe Nosso Templo`
 
       for (const row of selectedRows) {
         // Generate invite link (in a real app, this would be a proper invite system)
-        const inviteLink = `${window.location.origin}/convite/${generateId()}`;
+        const inviteLink = `${window.location.origin}/invite/${generateId()}`;
         
         const personalizedSubject = emailTemplate.subject.replace('{{nome}}', row.mapped.fullName || '');
         const personalizedBody = emailTemplate.body

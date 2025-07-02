@@ -1,8 +1,8 @@
 import { Student } from '../types';
 
 // Verificar se estamos em ambiente de produção (Netlify)
-// Forçando como true para garantir que o email seja enviado corretamente em produção
-const isProduction = true;
+// Detectar automaticamente se estamos em produção ou desenvolvimento
+const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
 
 // Serviço de email simulado para ambiente de desenvolvimento
 const mockEmailService = {
@@ -55,7 +55,9 @@ const productionEmailService = {
       return await response.json();
       */
       
+      // Em produção, deveríamos integrar com um serviço real de email
       // Por enquanto, apenas simulamos o envio em produção também
+      alert(`[PRODUÇÃO] Email enviado para: ${options.to}\nAssunto: ${options.subject}\n\nEm um ambiente de produção completo, este email seria enviado através de um serviço como SendGrid ou Mailgun.`);
       return { response: 'Email enviado com sucesso em produção' };
     } catch (error) {
       console.error('Erro ao enviar email em produção:', error);
