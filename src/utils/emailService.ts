@@ -1,4 +1,5 @@
 import { Student } from '../types';
+import emailjs from '@emailjs/browser';
 
 // Verificar se estamos em ambiente de produção (Netlify)
 // Detectar automaticamente se estamos em produção ou desenvolvimento
@@ -17,50 +18,61 @@ const mockEmailService = {
   }
 };
 
-// Em produção, usaríamos um serviço real de email
-// Esta é uma implementação básica que pode ser expandida para usar serviços como SendGrid, Mailgun, etc.
+// Configuração do EmailJS para produção
+// Substitua estes valores pelos seus IDs do EmailJS
+const EMAILJS_SERVICE_ID = process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_default';
+const EMAILJS_TEMPLATE_ID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_default';
+const EMAILJS_USER_ID = process.env.REACT_APP_EMAILJS_USER_ID || 'user_default';
+
+// Inicializar EmailJS
+if (isProduction) {
+  emailjs.init(EMAILJS_USER_ID);
+}
+
+// Serviço real de email para produção usando EmailJS
 const productionEmailService = {
   verify: async () => {
-    // Em produção, verificaria a conexão com o serviço de email
-    return true;
+    try {
+      console.log('Verificando configuração do EmailJS...');
+      // Verificar se temos as configurações necessárias
+      if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_USER_ID) {
+        console.error('Configurações do EmailJS incompletas');
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error('Erro ao verificar serviço de email:', error);
+      return false;
+    }
   },
   sendMail: async (options: any) => {
-    // Em produção, enviaria o email usando um serviço real
-    // Esta é apenas uma simulação para fins de demonstração
     try {
-      // Aqui você integraria com um serviço real como SendGrid, Mailgun, etc.
       console.log('Produção: Enviando email real para', options.to);
       
-      // Exemplo de integração com API de email (comentado)
-      /*
-      const response = await fetch('https://api.emailservice.com/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer YOUR_API_KEY'
-        },
-        body: JSON.stringify({
-          from: options.from,
-          to: options.to,
-          subject: options.subject,
-          html: options.html,
-          text: options.text
-        })
-      });
+      // Preparar os parâmetros para o EmailJS
+      const templateParams = {
+        to_email: options.to,
+        to_name: options.to.split('@')[0], // Nome básico extraído do email
+        from_name: 'Nosso Templo',
+        subject: options.subject,
+        message_html: options.html,
+        message_text: options.text || '',
+        reply_to: 'nossotemplo@aprendamagia.com.br'
+      };
       
-      if (!response.ok) {
-        throw new Error('Falha ao enviar email');
-      }
+      // Enviar o email usando EmailJS
+      const response = await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams
+      );
       
-      return await response.json();
-      */
-      
-      // Em produção, deveríamos integrar com um serviço real de email
-      // Por enquanto, apenas simulamos o envio em produção também
-      alert(`[PRODUÇÃO] Email enviado para: ${options.to}\nAssunto: ${options.subject}\n\nEm um ambiente de produção completo, este email seria enviado através de um serviço como SendGrid ou Mailgun.`);
-      return { response: 'Email enviado com sucesso em produção' };
+      console.log('Email enviado com sucesso:', response);
+      alert(`Email enviado com sucesso para: ${options.to}`);
+      return response;
     } catch (error) {
       console.error('Erro ao enviar email em produção:', error);
+      alert(`Erro ao enviar email para: ${options.to}. Verifique o console para mais detalhes.`);
       throw error;
     }
   }
