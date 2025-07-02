@@ -3,7 +3,8 @@
  * Este arquivo centraliza toda a lógica de inicialização e gerenciamento do cliente Supabase
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { createMockClient, MockSupabaseClient } from './supabaseMock';
+import type { MockSupabaseClient } from './supabaseMock';
+import { createMockClient } from './supabaseMock';
 
 // Configuração de retry
 const MAX_RETRY_ATTEMPTS = 3;
@@ -143,7 +144,28 @@ class SupabaseManager {
       this._initPromise = this.initializeClient();
     }
     
-    // Retorna um cliente mock temporário
+    // Verificar se as variáveis de ambiente estão definidas
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // Se as variáveis de ambiente estão definidas, tentar criar o cliente real
+    if (supabaseUrl && supabaseAnonKey) {
+      try {
+        const client = createClient<DatabaseTypes>(supabaseUrl, supabaseAnonKey, {
+          auth: { persistSession: true }
+        });
+        
+        this._client = client;
+        this._isMockClient = false;
+        console.log('Cliente Supabase inicializado sincronamente');
+        return client;
+      } catch (error) {
+        console.error('Erro ao inicializar Supabase sincronamente:', error);
+      }
+    }
+    
+    // Se não conseguir criar o cliente real, retorna um cliente mock temporário
+    console.warn('Usando cliente mock temporário enquanto aguarda inicialização do cliente real');
     this._isMockClient = true;
     return createMockClient();
   }
@@ -280,5 +302,63 @@ export const checkSupabaseConnection = async (): Promise<{
   }
 };
 
-// Re-exportar tipos do banco de dados para uso em outros arquivos
-export type { DatabaseStudent, DatabaseEvent, DatabaseAttendanceRecord } from './supabase';
+// Exportar interfaces de tipos do banco de dados para uso em outros arquivos
+export interface DatabaseStudent {
+  id: string;
+  photo?: string;
+  full_name: string;
+  birth_date: string | null;
+  cpf?: string;
+  rg?: string;
+  email: string;
+  phone?: string;
+  religion?: string;
+  unit: 'SP' | 'BH' | 'CP';
+  development_start_date?: string | null;
+  internship_start_date?: string | null;
+  magist_initiation_date?: string | null;
+  not_entry_date?: string | null;
+  master_magus_initiation_date?: string | null;
+  is_founder: boolean;
+  is_active: boolean;
+  inactive_since?: string | null;
+  last_activity?: string | null;
+  is_admin: boolean;
+  is_guest: boolean;
+  created_at: string;
+  updated_at: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  zip_code?: string;
+  city?: string;
+  state?: string;
+  turma?: string;
+  is_pending_approval?: boolean;
+  invite_status?: 'pending' | 'accepted' | 'expired';
+  invite_token?: string;
+  invited_at?: string;
+  invited_by?: string;
+}
+
+export interface DatabaseEvent {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  description?: string;
+  location: string;
+  unit: 'SP' | 'BH' | 'CP';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatabaseAttendanceRecord {
+  id: string;
+  student_id: string;
+  date: string;
+  type: 'development' | 'work' | 'monthly' | 'event';
+  event_id?: string;
+  created_at: string;
+}

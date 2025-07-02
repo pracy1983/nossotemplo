@@ -1,9 +1,77 @@
-import { supabase, DatabaseStudent, DatabaseEvent, DatabaseAttendanceRecord } from '../lib/supabase';
+import { supabase, supabaseManager } from '../lib/supabaseClient';
+
+// Interfaces para tipos do banco de dados
+interface DatabaseStudent {
+  id: string;
+  photo?: string;
+  full_name: string;
+  birth_date: string | null;
+  cpf?: string;
+  rg?: string;
+  email: string;
+  phone?: string;
+  religion?: string;
+  unit: 'SP' | 'BH' | 'CP';
+  development_start_date?: string | null;
+  internship_start_date?: string | null;
+  magist_initiation_date?: string | null;
+  not_entry_date?: string | null;
+  master_magus_initiation_date?: string | null;
+  is_founder: boolean;
+  is_active: boolean;
+  inactive_since?: string | null;
+  last_activity?: string | null;
+  is_admin: boolean;
+  is_guest: boolean;
+  created_at: string;
+  updated_at: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  zip_code?: string;
+  city?: string;
+  state?: string;
+  turma?: string;
+  is_pending_approval?: boolean;
+  invite_status?: 'pending' | 'accepted' | 'expired';
+  invite_token?: string;
+  invited_at?: string;
+  invited_by?: string;
+}
+
+interface DatabaseEvent {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  description?: string;
+  location: string;
+  unit: 'SP' | 'BH' | 'CP';
+  created_at: string;
+  updated_at: string;
+}
+
+interface DatabaseAttendanceRecord {
+  id: string;
+  student_id: string;
+  date: string;
+  type: 'development' | 'work' | 'monthly' | 'event';
+  event_id?: string;
+  created_at: string;
+}
 import { Student, Event, AttendanceRecord, User, Temple, InviteData, StudentRegistrationData, Turma, Aula } from '../types';
 import { EVENT_TYPES } from '../utils/constants';
-// Importar tanto o serviço de email original quanto o alternativo
-import { sendInviteEmail } from './emailService';
-import { simulateEmailSend } from './emailServiceAlternative';
+// Importar apenas o serviço de email frontend
+import { sendInviteEmail } from './emailServiceFrontend';
+
+// Função local para simular envio de email (sem depender do Nodemailer)
+const simulateEmailSend = (to: string, subject: string, html: string): void => {
+  console.log('Simulando envio de email (database.ts):')
+  console.log('Para:', to);
+  console.log('Assunto:', subject);
+  console.log('Conteúdo HTML:', html.substring(0, 100) + '...');
+};
 
 // Helper functions to convert between database and app types
 const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => ({
@@ -187,7 +255,10 @@ export const authenticateUser = async (email: string, password: string): Promise
   try {
     console.log('Attempting authentication for:', email);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Obter o cliente real do Supabase
+    const client = await supabaseManager.getClient();
+    
+    const { data, error } = await client.auth.signInWithPassword({
       email,
       password
     });
@@ -215,7 +286,7 @@ export const authenticateUser = async (email: string, password: string): Promise
     console.log('Authentication successful, looking up student data for:', email);
 
     // Get student data for the authenticated user
-    const { data: studentData, error: studentError } = await supabase
+    const { data: studentData, error: studentError } = await client
       .from('students')
       .select('*')
       .eq('email', email)
@@ -232,7 +303,7 @@ export const authenticateUser = async (email: string, password: string): Promise
         if (email === 'paularacy@gmail.com') {
           // Create admin user in students table if it doesn't exist
           try {
-            const { data: newStudentData, error: createError } = await supabase
+            const { data: newStudentData, error: createError } = await client
               .from('students')
               .insert({
                 full_name: 'Paula Racy - Administrador Principal',
@@ -278,7 +349,7 @@ export const authenticateUser = async (email: string, password: string): Promise
     console.log('Student data found:', studentData.full_name);
 
     // Get attendance records for this student
-    const { data: attendanceData, error: attendanceError } = await supabase
+    const { data: attendanceData, error: attendanceError } = await client
       .from('attendance_records')
       .select('*')
       .eq('student_id', studentData.id)

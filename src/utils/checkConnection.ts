@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabaseManager } from '../lib/supabaseClient';
 
 export const checkSupabaseConnection = async () => {
   console.log('Verificando conexão com Supabase...');
@@ -6,6 +6,9 @@ export const checkSupabaseConnection = async () => {
   console.log('Chave:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Configurada' : 'Não configurada');
   
   try {
+    // Obter o cliente real do Supabase
+    const supabase = await supabaseManager.getClient();
+    
     // Tenta fazer uma consulta simples para verificar a conexão
     const { data, error } = await supabase
       .from('students')

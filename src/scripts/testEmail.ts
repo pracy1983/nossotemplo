@@ -1,4 +1,4 @@
-import { sendEmail, sendPasswordResetEmail, sendInviteEmail } from '../services/emailService';
+import { sendEmail, sendPasswordResetEmail, sendInviteEmail } from '../services/emailServiceFrontend';
 
 // Função para testar o envio de email
 async function testEmail() {

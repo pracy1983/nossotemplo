@@ -3,7 +3,7 @@ import { Mail, Send, Copy, Check, AlertTriangle, UserCheck, X, Plus, Search, Lin
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
 import { generateId, validateEmail } from '../../utils/helpers';
-import { sendInviteEmail } from '../../services/emailService';
+import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
 
