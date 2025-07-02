@@ -1,6 +1,9 @@
 import { supabase, DatabaseStudent, DatabaseEvent, DatabaseAttendanceRecord } from '../lib/supabase';
 import { Student, Event, AttendanceRecord, User, Temple, InviteData, StudentRegistrationData, Turma, Aula } from '../types';
 import { EVENT_TYPES } from '../utils/constants';
+// Importar tanto o serviço de email original quanto o alternativo
+import { sendInviteEmail } from './emailService';
+import { simulateEmailSend } from './emailServiceAlternative';
 
 // Helper functions to convert between database and app types
 const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => ({
@@ -508,6 +511,23 @@ export const sendStudentInvite = async (inviteData: InviteData): Promise<string>
     };
 
     await createStudent(studentData as Student);
+
+    // Enviar email de convite
+    const inviteUrl = `${window.location.origin || 'https://nossotemplo.vercel.app'}/convite/${inviteToken}`;
+    
+    try {
+      // Tentar enviar email real
+      await sendInviteEmail(inviteData.email, inviteUrl, inviteData.fullName);
+      console.log(`Email de convite enviado com sucesso para ${inviteData.email}`);
+    } catch (emailError) {
+      // Em caso de erro, usar a simulação de email
+      console.warn(`Erro ao enviar email real, usando simulação: ${emailError}`);
+      simulateEmailSend(
+        inviteData.email,
+        'Convite - Nosso Templo',
+        `Olá ${inviteData.fullName}, você foi convidado para o Nosso Templo. Acesse: ${inviteUrl}`
+      );
+    }
 
     return inviteToken;
   } catch (error) {

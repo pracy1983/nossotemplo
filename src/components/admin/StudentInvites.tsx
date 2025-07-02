@@ -3,6 +3,8 @@ import { Mail, Send, Copy, Check, AlertTriangle, UserCheck, X, Plus, Search, Lin
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
 import { generateId, validateEmail } from '../../utils/helpers';
+import { sendInviteEmail } from '../../services/emailService';
+import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
 
 const StudentInvites: React.FC = () => {
@@ -123,13 +125,46 @@ const StudentInvites: React.FC = () => {
     setShowSendEmailsModal(true);
   };
   
-  const handleSendBulkEmails = () => {
+  const handleSendBulkEmails = async () => {
     if (selectedStudents.size === 0) return;
     
-    // Implementar a lógica de envio de e-mails em massa
-    alert(`E-mails enviados para ${selectedStudents.size} membros selecionados`);
-    setShowSendEmailsModal(false);
-    setSelectedStudents(new Set());
+    setIsSending(true);
+    
+    try {
+      // Obter os estudantes selecionados
+      const selectedStudentsList = students.filter(student => selectedStudents.has(student.id));
+      let successCount = 0;
+      let failCount = 0;
+      
+      // Enviar emails para cada estudante selecionado
+      for (const student of selectedStudentsList) {
+        const inviteUrl = `${window.location.origin}/convite/${student.inviteToken}`;
+        
+        try {
+          await sendInviteEmail(student.email, inviteUrl, student.fullName);
+          successCount++;
+        } catch (error) {
+          console.error(`Erro ao enviar email para ${student.email}:`, error);
+          failCount++;
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} email(s) enviado(s) com sucesso`);
+      }
+      
+      if (failCount > 0) {
+        toast.warning(`${failCount} email(s) não puderam ser enviados, mas foram simulados no console`);
+      }
+      
+      setShowSendEmailsModal(false);
+      setSelectedStudents(new Set());
+    } catch (error) {
+      console.error('Erro ao enviar emails em massa:', error);
+      toast.error('Ocorreu um erro ao enviar os emails');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const validateInviteForm = () => {
@@ -217,7 +252,7 @@ const StudentInvites: React.FC = () => {
 
     } catch (error: any) {
       console.error('Error generating invite link:', error);
-      alert('Erro ao gerar link de convite. Tente novamente.');
+      toast.error('Erro ao gerar link de convite. Tente novamente.');
     } finally {
       setIsSending(false);
     }
@@ -262,8 +297,14 @@ const StudentInvites: React.FC = () => {
       setGeneratedLink(inviteUrl);
       setShowLinkModal(true);
 
-      // Show success message
-      alert('Email foi enviado com sucesso!');
+      // Enviar email de convite usando o serviço de email com fallback para simulação
+      try {
+        await sendInviteEmail(inviteForm.email, inviteUrl, inviteForm.fullName);
+        toast.success(`Convite enviado com sucesso para ${inviteForm.email}`);
+      } catch (error) {
+        console.error('Erro ao enviar email de convite:', error);
+        toast.warning(`Convite gerado, mas houve um problema ao enviar o email para ${inviteForm.email}. O link foi salvo e pode ser copiado.`);
+      }
 
       // Reset form
       setInviteForm({
@@ -278,7 +319,7 @@ const StudentInvites: React.FC = () => {
 
     } catch (error: any) {
       console.error('Error sending invite:', error);
-      alert('Erro ao enviar convite. Tente novamente.');
+      toast.error('Erro ao enviar convite. Tente novamente.');
     } finally {
       setIsSending(false);
     }

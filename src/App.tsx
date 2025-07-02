@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import LoginForm from './components/auth/LoginForm';
@@ -6,6 +6,8 @@ import AdminPanel from './components/admin/AdminPanel';
 import StudentProfile from './components/student/StudentProfile';
 import Layout from './components/common/Layout';
 import { checkSupabaseConnection } from './utils/checkConnection';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -117,6 +119,7 @@ function App() {
     <AuthProvider>
       <DataProvider>
         <AppContent />
+        <ToastContainer position="top-right" autoClose={5000} />
       </DataProvider>
     </AuthProvider>
   );

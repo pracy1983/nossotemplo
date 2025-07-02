@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Save, Edit3, Trash2, Mail, UserPlus, ArrowLeft, Upload, Crop, AlertTriangle, X } from 'lucide-react';
+import { Save, Edit3, Trash2, Mail, UserPlus, ArrowLeft, Upload, Crop, AlertTriangle, X, Eye, EyeOff } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student } from '../../types';
 import { generateId, validateCPF, validateEmail, formatCPF, formatPhone } from '../../utils/helpers';
 import Modal from '../common/Modal';
+import { toast } from 'react-toastify';
 
 interface AddStudentProps {
   onNavigateToList?: () => void;
@@ -13,6 +14,7 @@ const AddStudent: React.FC<AddStudentProps> = ({ onNavigateToList }) => {
   const { addStudent, updateStudent, deleteStudent, students } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Student>>({
     fullName: '',
     birthDate: '',
@@ -453,9 +455,36 @@ const AddStudent: React.FC<AddStudentProps> = ({ onNavigateToList }) => {
     }
   };
 
-  const handleResendPassword = () => {
-    if (formData.email) {
-      alert(`Email de redefinição de senha enviado para ${formData.email}`);
+  const handleResendPassword = async () => {
+    if (formData.email && formData.fullName) {
+      try {
+        setIsLoading(true);
+        
+        // Gerar um token único para redefinição de senha
+        // Normalmente isso seria feito no backend, mas para fins de demonstração
+        // estamos gerando um token simples aqui
+        const resetToken = Math.random().toString(36).substring(2, 15);
+        const resetLink = `${window.location.origin}/redefinir-senha/${resetToken}`;
+        
+        // Importar a função de envio de email de redefinição de senha
+        const { sendPasswordResetEmail } = await import('../../services/emailService');
+        
+        // Enviar email de redefinição de senha
+        const success = await sendPasswordResetEmail(formData.email, resetLink, formData.fullName);
+        
+        if (success) {
+          toast.success(`Email de redefinição de senha enviado para ${formData.email}`);
+        } else {
+          toast.error('Erro ao enviar email de redefinição de senha');
+        }
+      } catch (error) {
+        console.error('Erro ao enviar email de redefinição de senha:', error);
+        toast.error('Erro ao enviar email de redefinição de senha');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      toast.warning('É necessário informar o nome e email do aluno');
     }
   };
 
