@@ -1,5 +1,5 @@
 import { Student } from '../types';
-import emailjs from '@emailjs/browser';
+import nodemailer from 'nodemailer';
 
 // Verificar se estamos em ambiente de produção (Netlify)
 // Detectar automaticamente se estamos em produção ou desenvolvimento
@@ -18,21 +18,36 @@ const mockEmailService = {
   }
 };
 
-// Configuração do EmailJS
-// Usando as variáveis de ambiente já configuradas no .env
-const EMAILJS_SERVICE_ID = process.env.REACT_APP_EMAILJS_SERVICE_ID || '';
-const EMAILJS_TEMPLATE_ID = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || '';
-const EMAILJS_PUBLIC_KEY = process.env.REACT_APP_EMAILJS_USER_ID || '';
-const EMAIL_FROM = 'nossotemplo@aprendamagia.com.br';
+// Configuração do SMTP - Usar variáveis de ambiente ou valores padrão
+const EMAIL_FROM = import.meta.env.VITE_SMTP_USER || 'nossotemplo@aprendamagia.com.br';
+const EMAIL_PASSWORD = import.meta.env.VITE_SMTP_PASSWORD || '=Xh%fWTEa~&H';
+const SMTP_HOST = import.meta.env.VITE_SMTP_HOST || 'mail.aprendamagia.com.br';
+const SMTP_PORT = Number(import.meta.env.VITE_SMTP_PORT) || 465;
 
-// Serviço de email para produção usando EmailJS
+// Criar o transporte do Nodemailer para SMTP
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: true, // true para porta 465
+    auth: {
+      user: EMAIL_FROM,
+      pass: EMAIL_PASSWORD,
+    },
+  });
+};
+
+// Serviço de email para produção usando Nodemailer com SMTP
 const productionEmailService = {
   verify: async () => {
     try {
-      console.log('Verificando configuração do EmailJS...');
-      return true;
+      console.log('Verificando configuração do servidor SMTP...');
+      const transporter = createTransporter();
+      const verification = await transporter.verify();
+      console.log('Servidor SMTP verificado com sucesso!');
+      return verification;
     } catch (error) {
-      console.error('Erro ao verificar serviço de email:', error);
+      console.error('Erro ao verificar serviço de email SMTP:', error);
       return false;
     }
   },
@@ -40,27 +55,19 @@ const productionEmailService = {
     try {
       console.log('Produção: Enviando email real para', options.to);
       
-      // Preparar os parâmetros para o EmailJS
-      const templateParams = {
-        to_email: options.to,
-        to_name: options.to.split('@')[0], // Nome básico extraído do email
-        from_name: 'Nosso Templo',
+      const transporter = createTransporter();
+      
+      // Enviar o email usando Nodemailer
+      const info = await transporter.sendMail({
+        from: options.from || `"Nosso Templo" <${EMAIL_FROM}>`,
+        to: options.to,
         subject: options.subject,
-        message: options.text || '',
-        html_message: options.html || '',
-        reply_to: EMAIL_FROM
-      };
+        text: options.text || '',
+        html: options.html || ''
+      });
       
-      // Enviar o email usando EmailJS
-      const response = await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams,
-        EMAILJS_PUBLIC_KEY
-      );
-      
-      console.log('Email enviado com sucesso:', response);
-      return response;
+      console.log('Email enviado com sucesso:', info.messageId);
+      return info;
     } catch (error) {
       console.error('Erro ao enviar email em produção:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -225,6 +232,36 @@ export const generateInviteLink = (token: string): string => {
  */
 export const generateInviteToken = (): string => {
   return Math.random().toString(36).substr(2, 16) + Date.now().toString(36);
+};
+
+/**
+ * Envia um email de notificação de rejeição para um membro
+ * @param to Email do destinatário
+ * @param name Nome do destinatário
+ * @param reason Motivo da rejeição (opcional)
+ * @returns Promise com o resultado do envio
+ */
+export const sendRejectionEmail = async (
+  to: string,
+  name: string,
+  reason: string = ''
+): Promise<boolean> => {
+  const subject = 'Notificação do Nosso Templo';
+  
+  // Template do email de rejeição
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 5px;">
+      <h2 style="color: #333; text-align: center;">Notificação do Nosso Templo</h2>
+      <p>Olá, <strong>${name}</strong>,</p>
+      <p>Agradecemos seu interesse em participar do Nosso Templo.</p>
+      <p>Infelizmente, sua solicitação não foi aprovada neste momento.</p>
+      ${reason ? `<p><strong>Motivo:</strong> ${reason}</p>` : ''}
+      <p>Se tiver alguma dúvida, entre em contato respondendo a este email.</p>
+      <p>Atenciosamente,<br>Equipe Nosso Templo</p>
+    </div>
+  `;
+
+  return await sendEmail(to, subject, html);
 };
 
 /**
