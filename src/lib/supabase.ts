@@ -1,69 +1,45 @@
-// Importação com tratamento de erro
-let createClient: any;
-try {
-  // Importação dinâmica para evitar erros de inicialização
-  createClient = require('@supabase/supabase-js').createClient;
-} catch (error) {
-  console.error('Erro ao importar Supabase:', error);
-  // Fallback para evitar que a aplicação quebre
-  createClient = (_url: string, _key: string, _options: any) => {
-    console.warn('Usando cliente Supabase simulado');
-    return {
-      from: () => ({
-        select: () => Promise.resolve({ data: [], error: null }),
-        insert: () => Promise.resolve({ data: null, error: null }),
-        update: () => Promise.resolve({ data: null, error: null }),
-        delete: () => Promise.resolve({ data: null, error: null }),
-      }),
-      auth: {
-        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
-        signOut: () => Promise.resolve({ error: null }),
-      },
-    };
+/**
+ * Configuração simplificada do Supabase para evitar erros de inicialização
+ */
+import { createClient } from '@supabase/supabase-js';
+
+// Obter as variáveis de ambiente
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Verificar se as variáveis estão definidas
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Variáveis de ambiente do Supabase não encontradas');
+}
+
+// Interface para o cliente simulado
+interface MockClient {
+  from: (table: string) => any;
+  auth: {
+    getUser: () => Promise<any>;
+    signInWithPassword: (credentials: any) => Promise<any>;
+    signOut: () => Promise<any>;
   };
 }
 
-// Obter as variáveis de ambiente com valores padrão para evitar erros
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Cliente Supabase ou cliente simulado
+let supabaseClient: any;
 
-// Log para debug
-console.log('Supabase Environment Check:');
-console.log('URL:', supabaseUrl ? 'Present' : 'Missing');
-console.log('Anon Key:', supabaseAnonKey ? 'Present' : 'Missing');
-
-// Verificar se as variáveis de ambiente estão definidas
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables');
-  console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'Present' : 'Missing');
-  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing');
-  console.warn('Using fallback values for development only');
-}
-
-// Validar o formato da URL apenas se ela estiver definida
-if (supabaseUrl) {
-  try {
-    new URL(supabaseUrl);
-  } catch (error) {
-    console.error('Invalid Supabase URL format:', supabaseUrl);
-    console.warn('Application may not function correctly with invalid URL');
-  }
-}
-
-// Criar o cliente Supabase com configuração mínima para evitar erros
-let supabase: any;
 try {
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true
-    }
-  });
+  // Tentar criar o cliente Supabase com configuração mínima
+  if (supabaseUrl && supabaseAnonKey) {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: true }
+    });
+    console.log('Cliente Supabase inicializado com sucesso');
+  } else {
+    throw new Error('Variáveis de ambiente ausentes');
+  }
 } catch (error) {
-  console.error('Erro ao criar cliente Supabase:', error);
-  // Criar um cliente simulado para evitar que a aplicação quebre
-  supabase = {
+  console.error('Erro ao inicializar Supabase:', error);
+  
+  // Criar um cliente simulado em caso de erro
+  supabaseClient = {
     from: () => ({
       select: () => Promise.resolve({ data: [], error: null }),
       insert: () => Promise.resolve({ data: null, error: null }),
@@ -75,36 +51,13 @@ try {
       signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
       signOut: () => Promise.resolve({ error: null }),
     },
-  };
+  } as MockClient;
+  
+  console.warn('Usando cliente Supabase simulado');
 }
 
-// Exportar o cliente Supabase
-export { supabase };
-
-// Test connection on initialization with better error handling
-const testConnection = async () => {
-  try {
-    console.log('Testing Supabase connection...');
-    const { error } = await supabase.from('students').select('count', { count: 'exact', head: true });
-    
-    if (error) {
-      console.error('Supabase connection test failed:', error);
-      console.error('Error details:', {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
-    } else {
-      console.log('Supabase connection test successful');
-    }
-  } catch (error) {
-    console.error('Supabase connection test error:', error);
-  }
-};
-
-// Run connection test
-testConnection();
+// Exportar o cliente
+export const supabase = supabaseClient;
 
 // Database types
 export interface DatabaseStudent {
