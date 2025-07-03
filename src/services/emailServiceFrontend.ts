@@ -31,22 +31,32 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
   try {
     console.log(`Tentando enviar email para ${to}...`);
     
-    // Em ambiente de produção, você pode implementar uma chamada para uma Edge Function do Supabase
-    // ou outro serviço de API que faça o envio real do email
-    
-    // Para desenvolvimento, vamos usar simulação
+    // Em ambiente de desenvolvimento, usamos simulação
     if (import.meta.env.DEV) {
       simulateEmailSend(to, subject, html);
       return true;
     }
     
-    // Usando Supabase Edge Function para enviar email
-    const client = supabaseManager.getClientSync();
-    const { data, error } = await client.functions.invoke('send-email', {
-      body: { to, subject, html }
+    // Em ambiente de produção, enviamos o email real
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to,
+        subject,
+        html,
+        from: 'Nosso Templo <nossotemplo@aprendamagia.com.br>'
+      })
     });
     
-    if (error) throw new Error(error.message);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao enviar email');
+    }
+    
+    console.log('Email enviado com sucesso!');
     return true;
   } catch (error: any) {
     console.warn(`❌ Erro ao enviar email: ${error?.message || 'Erro desconhecido'}`);

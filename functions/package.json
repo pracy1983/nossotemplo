@@ -1,0 +1,10 @@
+{
+  "name": "nossotemplo-functions",
+  "version": "1.0.0",
+  "description": "Funções serverless para o Nosso Templo",
+  "main": "index.js",
+  "dependencies": {
+    "nodemailer": "^6.9.1",
+    "dotenv": "^16.0.3"
+  }
+}
