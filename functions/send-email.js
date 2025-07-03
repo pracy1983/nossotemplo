@@ -72,7 +72,7 @@ function createMailerSendClient() {
     
     // Inicializar o cliente MailerSend conforme a documentação mais recente
     const mailerSend = new MailerSend({
-      apiKey: config.apiKey
+      api_key: config.apiKey
     });
     
     console.log('Cliente MailerSend criado:', {
