@@ -38,7 +38,7 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
     }
     
     // Em ambiente de produção, enviamos o email real
-    const response = await fetch('/api/send-email', {
+    const response = await fetch('/.netlify/functions/send-email', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
