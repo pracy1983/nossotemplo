@@ -3,7 +3,7 @@
  * Esta versão é compatível com o navegador e não usa o Nodemailer diretamente
  */
 
-import { supabase } from '../lib/supabaseClient';
+import { supabaseManager } from '../lib/supabaseClient';
 
 // Função para simular o envio de email (para desenvolvimento)
 export const simulateEmailSend = (to: string, subject: string, content: string): void => {
@@ -41,7 +41,8 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
     }
     
     // Exemplo de como seria usando uma Edge Function do Supabase (precisa ser implementada)
-    // const { data, error } = await supabase.functions.invoke('send-email', {
+    // const client = supabaseManager.getClientSync();
+    // const { data, error } = await client.functions.invoke('send-email', {
     //   body: { to, subject, html }
     // });
     
