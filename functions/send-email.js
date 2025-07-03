@@ -9,7 +9,7 @@ export async function handler(event, context) {
     console.log("Payload received:", { to, subject });
 
     // Verificar se as variáveis de ambiente SMTP estão definidas
-    if (!process.env.MAILERSEND_SMTP_SERVER || !process.env.MAILERSEND_SMTP_USERNAME || !process.env.MAILERSEND_SMTP_PASSWORD) {
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.error("Variáveis de ambiente SMTP não estão configuradas corretamente.");
       return {
         statusCode: 500,
@@ -19,27 +19,26 @@ export async function handler(event, context) {
 
     // Create SMTP transporter
     const transporter = nodemailer.createTransport({
-      host: process.env.MAILERSEND_SMTP_SERVER,
-      port: parseInt(process.env.MAILERSEND_SMTP_PORT, 10),
-      secure: parseInt(process.env.MAILERSEND_SMTP_PORT, 10) === 465, // true for 465, false for others
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT, 10),
+      secure: parseInt(process.env.EMAIL_PORT, 10) === 465, // true for 465, false for others
       auth: {
-        user: process.env.MAILERSEND_SMTP_USERNAME,
-        pass: process.env.MAILERSEND_SMTP_PASSWORD,
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
     // Log de configuração (sem mostrar senha)
     console.log("SMTP Configuration:", {
-      host: process.env.MAILERSEND_SMTP_SERVER,
-      port: process.env.MAILERSEND_SMTP_PORT,
-      secure: parseInt(process.env.MAILERSEND_SMTP_PORT, 10) === 465,
-      user: process.env.MAILERSEND_SMTP_USERNAME,
-      from: process.env.MAILERSEND_FROM_EMAIL
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      secure: parseInt(process.env.EMAIL_PORT, 10) === 465,
+      user: process.env.EMAIL_USER
     });
 
     // Send mail
     const info = await transporter.sendMail({
-      from: `"${process.env.MAILERSEND_FROM_NAME || "Nosso Templo"}" <${process.env.MAILERSEND_FROM_EMAIL}>`,
+      from: process.env.EMAIL_FROM || 'Nosso Templo <nossotemplo@aprendamagia.com.br>',
       to,
       subject,
       html,
