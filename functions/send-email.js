@@ -6,88 +6,36 @@ const { MailerSend, EmailParams, Recipient, Sender } = require('mailersend');
 const mailersendVersion = require('mailersend/package.json').version || 'desconhecida';
 console.log(`=== INICIALIZANDO FUNÇÃO SERVERLESS COM MAILERSEND VERSÃO ${mailersendVersion} ===`);
 
-// Função para obter variáveis de ambiente (suporta tanto prefixo VITE_ quanto sem prefixo)
-const getEnvVar = (name) => {
-  const value = process.env[name] || process.env[`VITE_${name}`] || '';
-  console.log(`Lendo variável ${name}: ${value ? 'Valor encontrado' : 'Não encontrado'}`);
-  return value;
-};
+// Verificar se a variável de ambiente MAILERSEND_API_KEY está definida
+console.log("MAILERSEND_API_KEY:", process.env.MAILERSEND_API_KEY ? "LOADED" : "MISSING");
 
-// Função para obter configuração do MailerSend
-function getMailerSendConfig() {
-  // Log completo de todas as variáveis de ambiente disponíveis (sem valores sensíveis)
-  console.log('=== TODAS AS VARIÁVEIS DE AMBIENTE DISPONÍVEIS ===');
-  const envKeys = Object.keys(process.env);
-  console.log('Total de variáveis:', envKeys.length);
-  console.log('Nomes das variáveis:', envKeys.filter(key => 
-    !key.includes('KEY') && 
-    !key.includes('SECRET') && 
-    !key.includes('PASS') && 
-    !key.includes('PASSWORD') && 
-    !key.includes('TOKEN')
-  ));
-  
-  // Verificar especificamente as variáveis do MailerSend
-  console.log('=== VERIFICAÇÃO DE VARIÁVEIS MAILERSEND ===');
-  console.log('MAILERSEND_API_KEY existe:', !!process.env.MAILERSEND_API_KEY);
-  console.log('MAILERSEND_FROM_EMAIL existe:', !!process.env.MAILERSEND_FROM_EMAIL);
-  console.log('MAILERSEND_FROM_NAME existe:', !!process.env.MAILERSEND_FROM_NAME);
-  
-  // Obter configuração do MailerSend das variáveis de ambiente
-  const apiKey = process.env.MAILERSEND_API_KEY;
-  const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'nossotemplo@aprendamagia.com.br';
-  const fromName = process.env.MAILERSEND_FROM_NAME || 'Nosso Templo';
-  
-  // Verificar se a API key está definida
-  if (!apiKey) {
-    console.error('ERRO CRÍTICO: MAILERSEND_API_KEY não está definida nas variáveis de ambiente');
-    throw new Error('API key do MailerSend não configurada. Configure a variável de ambiente MAILERSEND_API_KEY.');
-  }
-  
-  // Log dos valores que serão usados (sem exibir a API key completa)
-  console.log('=== CONFIGURAÇÃO MAILERSEND QUE SERÁ USADA ===');
-  console.log('API Key definida:', !!apiKey);
-  console.log('API Key primeiros caracteres:', apiKey ? apiKey.substring(0, 10) + '***' : 'Não definido');
-  console.log('From Email:', fromEmail);
-  console.log('From Name:', fromName);
-  
-  return {
-    apiKey,
-    fromEmail,
-    fromName
-  };
+if (!process.env.MAILERSEND_API_KEY) {
+  throw new Error("MAILERSEND_API_KEY is not defined in environment variables.");
 }
 
-// Função para criar o cliente MailerSend
-function createMailerSendClient() {
-  try {
-    // Obter configuração do MailerSend
-    const config = getMailerSendConfig();
-    
-    console.log('Criando cliente MailerSend com configuração:', {
-      apiKeyDefined: !!config.apiKey,
-      fromEmail: config.fromEmail,
-      fromName: config.fromName
-    });
-    
-    // Inicializar o cliente MailerSend conforme a versão do SDK instalada
-    const mailerSend = new MailerSend({
-      apiKey: process.env.MAILERSEND_API_KEY
-    });
-    
-    console.log('MailerSend inicializado com apiKey (camelCase) diretamente do process.env.MAILERSEND_API_KEY');
-    
-    console.log('Cliente MailerSend criado:', {
-      hasEmailProperty: !!mailerSend.email,
-      clientType: typeof mailerSend
-    });
-    
-    return mailerSend;
-  } catch (error) {
-    console.error('Erro ao criar cliente MailerSend:', error);
-    return null;
-  }
-}
+// Inicializar o cliente MailerSend diretamente
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY
+});
+
+console.log('Cliente MailerSend inicializado com apiKey diretamente do process.env.MAILERSEND_API_KEY');
+
+// Log completo de todas as variáveis de ambiente disponíveis (sem valores sensíveis)
+console.log('=== TODAS AS VARIÁVEIS DE AMBIENTE DISPONÍVEIS ===');
+const envKeys = Object.keys(process.env);
+console.log('Total de variáveis:', envKeys.length);
+console.log('Nomes das variáveis:', envKeys.filter(key => 
+  !key.includes('KEY') && 
+  !key.includes('SECRET') && 
+  !key.includes('PASS') && 
+  !key.includes('PASSWORD') && 
+  !key.includes('TOKEN')
+));
+
+// Verificar especificamente as variáveis do MailerSend
+console.log('=== VERIFICAÇÃO DE VARIÁVEIS MAILERSEND ===');
+console.log('MAILERSEND_FROM_EMAIL existe:', !!process.env.MAILERSEND_FROM_EMAIL);
+console.log('MAILERSEND_FROM_NAME existe:', !!process.env.MAILERSEND_FROM_NAME);
 
 // Handler para a requisição POST
 exports.handler = async (event, context) => {
@@ -157,27 +105,24 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Criar cliente MailerSend
-    const mailerSend = createMailerSendClient();
+    // Usar o cliente MailerSend global que já foi inicializado no início do arquivo
+    console.log('Usando cliente MailerSend global já inicializado');
     
-    // Verificar se o cliente foi criado corretamente
-    if (!mailerSend) {
-      console.error('Falha ao criar cliente MailerSend');
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ message: 'Falha ao criar cliente de email' })
-      };
+    if (!mailerSend || !mailerSend.email) {
+      throw new Error('Cliente MailerSend não está disponível ou não foi inicializado corretamente');
     }
 
-    // Obter configuração do MailerSend
-    const config = getMailerSendConfig();
+    // Obter configuração do remetente diretamente das variáveis de ambiente
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'nossotemplo@aprendamagia.com.br';
+    const fromName = process.env.MAILERSEND_FROM_NAME || 'Nosso Templo';
+    
+    console.log('Configuração do remetente:', { fromEmail, fromName });
     
     // Configurar email usando MailerSend
     console.log('Configurando email com MailerSend...');
     
     // Criar remetente
-    const sentFrom = new Sender(config.fromEmail, config.fromName);
+    const sentFrom = new Sender(fromEmail, fromName);
     
     // Criar destinatário
     const recipients = [new Recipient(to)];
