@@ -40,17 +40,13 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
       return true;
     }
     
-    // Exemplo de como seria usando uma Edge Function do Supabase (precisa ser implementada)
-    // const client = supabaseManager.getClientSync();
-    // const { data, error } = await client.functions.invoke('send-email', {
-    //   body: { to, subject, html }
-    // });
+    // Usando Supabase Edge Function para enviar email
+    const client = supabaseManager.getClientSync();
+    const { data, error } = await client.functions.invoke('send-email', {
+      body: { to, subject, html }
+    });
     
-    // if (error) throw new Error(error.message);
-    // return true;
-    
-    // Por enquanto, vamos apenas simular
-    simulateEmailSend(to, subject, html);
+    if (error) throw new Error(error.message);
     return true;
   } catch (error: any) {
     console.warn(`❌ Erro ao enviar email: ${error?.message || 'Erro desconhecido'}`);
