@@ -8,19 +8,53 @@ const getEnvVar = (name) => {
   return value;
 };
 
-// Configuração do SMTP com logs detalhados
-const getSmtpConfig = () => {
-  const host = getEnvVar('SMTP_HOST') || getEnvVar('EMAIL_HOST') || 'mail.aprendamagia.com.br';
-  const port = Number(getEnvVar('SMTP_PORT') || getEnvVar('EMAIL_PORT') || 465);
-  const user = getEnvVar('SMTP_USER') || getEnvVar('EMAIL_USER') || 'nossotemplo@aprendamagia.com.br';
-  const pass = getEnvVar('SMTP_PASSWORD') || getEnvVar('EMAIL_PASS');
+// Função para obter configuração SMTP das variáveis de ambiente
+function getSmtpConfig() {
+  // Log completo de todas as variáveis de ambiente disponíveis (sem valores sensíveis)
+  console.log('=== TODAS AS VARIÁVEIS DE AMBIENTE DISPONÍVEIS ===');
+  const envKeys = Object.keys(process.env);
+  console.log('Total de variáveis:', envKeys.length);
+  console.log('Nomes das variáveis:', envKeys.filter(key => 
+    !key.includes('KEY') && 
+    !key.includes('SECRET') && 
+    !key.includes('PASS') && 
+    !key.includes('PASSWORD') && 
+    !key.includes('TOKEN')
+  ));
   
-  console.log(`Configuração SMTP: host=${host}, port=${port}, user=${user}, pass=${pass ? 'Definida' : 'Não definida'}`);
+  // Verificar especificamente as variáveis SMTP
+  console.log('=== VERIFICAÇÃO DE VARIÁVEIS SMTP ===');
+  console.log('SMTP_HOST existe:', !!process.env.SMTP_HOST);
+  console.log('EMAIL_HOST existe:', !!process.env.EMAIL_HOST);
+  console.log('SMTP_PORT existe:', !!process.env.SMTP_PORT);
+  console.log('EMAIL_PORT existe:', !!process.env.EMAIL_PORT);
+  console.log('SMTP_USER existe:', !!process.env.SMTP_USER);
+  console.log('EMAIL_USER existe:', !!process.env.EMAIL_USER);
+  console.log('SMTP_PASSWORD existe:', !!process.env.SMTP_PASSWORD);
+  console.log('EMAIL_PASS existe:', !!process.env.EMAIL_PASS);
+  
+  // Tentar obter configuração SMTP das variáveis de ambiente
+  // Suporta tanto variáveis com prefixo SMTP_ quanto EMAIL_
+  const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'mail.aprendamagia.com.br';
+  const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '465', 10);
+  const user = process.env.SMTP_USER || process.env.EMAIL_USER || 'nossotemplo@aprendamagia.com.br';
+  
+  // IMPORTANTE: Usar senha fixa para teste se não encontrar nas variáveis de ambiente
+  const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || 'R5koP*sRbQtP';
+  
+  // Log dos valores que serão usados (sem exibir a senha completa)
+  console.log('=== CONFIGURAÇÃO SMTP QUE SERÁ USADA ===');
+  console.log('Host:', host);
+  console.log('Port:', port);
+  console.log('User:', user);
+  console.log('Pass definido:', !!pass);
+  console.log('Pass primeiros caracteres:', pass ? pass.substring(0, 3) + '***' : 'Não definido');
+  console.log('Secure:', port === 465);
   
   return {
     host,
     port,
-    secure: true,
+    secure: port === 465,
     auth: {
       user,
       pass
@@ -28,17 +62,32 @@ const getSmtpConfig = () => {
     tls: {
       rejectUnauthorized: false
     },
-    debug: true, // Habilita logs de debug do Nodemailer
-    logger: true  // Habilita logger do Nodemailer
+    debug: true,
+    logger: true
   };
-};
+}
 
-// Criação do transporter sob demanda para evitar problemas de inicialização
-const createTransporter = () => {
-  const config = getSmtpConfig();
-  console.log('Criando transporter com configuração:', JSON.stringify(config, null, 2).replace(/"pass":"[^"]*"/, '"pass":"***"'));
-  return nodemailer.createTransport(config);
-};
+// Função para criar o transporter sob demanda
+function createTransporter() {
+  try {
+    // Obter configuração SMTP
+    const config = getSmtpConfig();
+    
+    console.log('Criando transporter com configuração:', {
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      user: config.auth.user,
+      tls: config.tls,
+      debug: config.debug
+    });
+    
+    return nodemailer.createTransport(config);
+  } catch (error) {
+    console.error('Erro ao criar transporter:', error);
+    return null;
+  }
+}
 
 // Handler para a requisição POST
 exports.handler = async (event, context) => {
