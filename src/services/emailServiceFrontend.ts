@@ -37,27 +37,49 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
       return true;
     }
     
-    // Em ambiente de produção, enviamos o email real
-    const response = await fetch('/.netlify/functions/send-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to,
-        subject,
-        html,
-        from: 'Nosso Templo <nossotemplo@aprendamagia.com.br>'
-      })
-    });
+    // Em ambiente de produção, tentamos enviar o email real com retry
+    let attempts = 0;
+    const maxAttempts = 2;
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Erro ao enviar email');
+    while (attempts < maxAttempts) {
+      try {
+        attempts++;
+        console.log(`Tentativa ${attempts} de enviar email para ${to}...`);
+        
+        const endpoint = attempts === 1 
+          ? '/.netlify/functions/send-email' 
+          : '/api/send-email';
+          
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to,
+            subject,
+            html,
+            from: 'Nosso Templo <nossotemplo@aprendamagia.com.br>'
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.log(`Erro na tentativa ${attempts}:`, errorData);
+          throw new Error(errorData.message || 'Erro ao enviar email');
+        }
+        
+        console.log('Email enviado com sucesso!');
+        return true;
+      } catch (retryError) {
+        console.log(`Falha na tentativa ${attempts}:`, retryError);
+        if (attempts >= maxAttempts) {
+          throw retryError;
+        }
+      }
     }
     
-    console.log('Email enviado com sucesso!');
-    return true;
+    return false; // Nunca deve chegar aqui, mas TypeScript exige um retorno
   } catch (error: any) {
     console.warn(`❌ Erro ao enviar email: ${error?.message || 'Erro desconhecido'}`);
     console.log('Usando simulação de email como fallback...');
