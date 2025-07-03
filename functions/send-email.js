@@ -1,5 +1,6 @@
 // API para envio de emails usando MailerSend
-const { MailerSend, EmailParams, Recipient } = require('mailersend');
+// @esbuild-external:mailersend
+const { MailerSend, EmailParams, Recipient, Sender } = require('mailersend');
 
 // Função para obter variáveis de ambiente (suporta tanto prefixo VITE_ quanto sem prefixo)
 const getEnvVar = (name) => {
@@ -151,13 +152,15 @@ exports.handler = async (event, context) => {
     // Configurar email usando MailerSend
     console.log('Configurando email com MailerSend...');
     
+    // Criar remetente
+    const sentFrom = new Sender(config.fromEmail, config.fromName);
+    
     // Criar destinatário
     const recipients = [new Recipient(to)];
     
     // Criar parâmetros do email
     const emailParams = new EmailParams()
-      .setFrom(config.fromEmail)
-      .setFromName(config.fromName)
+      .setFrom(sentFrom)
       .setRecipients(recipients)
       .setSubject(subject)
       .setHtml(html);
