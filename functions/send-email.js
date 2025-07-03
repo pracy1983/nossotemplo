@@ -30,9 +30,15 @@ function getMailerSendConfig() {
   console.log('MAILERSEND_FROM_NAME existe:', !!process.env.MAILERSEND_FROM_NAME);
   
   // Obter configuração do MailerSend das variáveis de ambiente
-  const apiKey = process.env.MAILERSEND_API_KEY || 'mlsn.876d858a32a34748b252e99371185617dbacf1b9d106eb41004dc5fd6e58d6c2';
+  const apiKey = process.env.MAILERSEND_API_KEY;
   const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'nossotemplo@aprendamagia.com.br';
   const fromName = process.env.MAILERSEND_FROM_NAME || 'Nosso Templo';
+  
+  // Verificar se a API key está definida
+  if (!apiKey) {
+    console.error('ERRO CRÍTICO: MAILERSEND_API_KEY não está definida nas variáveis de ambiente');
+    throw new Error('API key do MailerSend não configurada. Configure a variável de ambiente MAILERSEND_API_KEY.');
+  }
   
   // Log dos valores que serão usados (sem exibir a API key completa)
   console.log('=== CONFIGURAÇÃO MAILERSEND QUE SERÁ USADA ===');
