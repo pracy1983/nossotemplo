@@ -97,14 +97,18 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    console.log('Iniciando função de envio de email com MailerSend...');
+    console.log('=== INICIANDO FUNÇÃO DE ENVIO DE EMAIL ===');
     console.log('Headers da requisição:', JSON.stringify(event.headers));
     console.log('Método HTTP:', event.httpMethod);
+    console.log('Origem da requisição:', event.headers.origin || event.headers.Origin || 'Desconhecida');
     
-    // Log das variáveis de ambiente (sem expor senhas)
-    console.log('Variáveis de ambiente disponíveis:', Object.keys(process.env).filter(key => 
+    // Log detalhado das variáveis de ambiente (sem expor senhas)
+    console.log('=== VARIÁVEIS DE AMBIENTE ===');
+    const envKeys = Object.keys(process.env).filter(key => 
       !key.includes('KEY') && !key.includes('SECRET') && !key.includes('PASS') && !key.includes('TOKEN')
-    ));
+    );
+    console.log('Total de variáveis:', envKeys.length);
+    console.log('Variáveis disponíveis:', envKeys);
 
     // Verificar método
     if (event.httpMethod !== 'POST') {
@@ -181,38 +185,102 @@ exports.handler = async (event, context) => {
     });
 
     // Enviar email
-    console.log('Enviando email via MailerSend...');
+    console.log('=== ENVIANDO EMAIL VIA MAILERSEND ===');
+    console.log('Detalhes do email:');
+    console.log('- Destinatário:', to);
+    console.log('- Assunto:', subject);
+    console.log('- Remetente:', config.fromEmail);
     
     // Verificar se o cliente tem a propriedade email
     if (!mailerSend.email) {
-      console.error('Erro: mailerSend.email não está definido');
-      throw new Error('Cliente MailerSend inicializado incorretamente');
+      console.error('ERRO CRÍTICO: mailerSend.email não está definido');
+      console.log('Estrutura do objeto mailerSend:', Object.keys(mailerSend));
+      throw new Error('Cliente MailerSend inicializado incorretamente: propriedade email não encontrada');
     }
+    
+    // Verificar se o método send existe
+    if (typeof mailerSend.email.send !== 'function') {
+      console.error('ERRO CRÍTICO: mailerSend.email.send não é uma função');
+      console.log('Estrutura do objeto mailerSend.email:', Object.keys(mailerSend.email));
+      throw new Error('API MailerSend incompatível: método send não encontrado');
+    }
+    
+    // Verificar se os parâmetros do email estão corretos
+    console.log('Parâmetros do email:', {
+      from: emailParams.from ? 'definido' : 'indefinido',
+      to: emailParams.to ? `definido (${emailParams.to.length} destinatários)` : 'indefinido',
+      subject: emailParams.subject ? 'definido' : 'indefinido',
+      html: emailParams.html ? 'definido' : 'indefinido'
+    });
     
     // Enviar email usando a API correta
     console.log('Chamando mailerSend.email.send()...');
-    const response = await mailerSend.email.send(emailParams);
-
-    console.log('Email enviado com sucesso:', response);
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({ 
-        message: 'Email enviado com sucesso',
-        response: response
-      })
-    };
+    try {
+      const response = await mailerSend.email.send(emailParams);
+      
+      console.log('Email enviado com sucesso:', response);
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ 
+          message: 'Email enviado com sucesso',
+          response: response
+        })
+      };
+    } catch (emailError) {
+      console.error('ERRO AO ENVIAR EMAIL VIA MAILERSEND:', emailError);
+      console.error('Detalhes do erro:', {
+        message: emailError.message,
+        name: emailError.name,
+        code: emailError.code,
+        stack: emailError.stack
+      });
+      
+      if (emailError.response) {
+        console.error('Resposta da API:', {
+          status: emailError.response.status,
+          statusText: emailError.response.statusText,
+          data: emailError.response.data
+        });
+      }
+      
+      throw new Error(`Erro ao enviar email via MailerSend: ${emailError.message}`);
+    }
   } catch (error) {
-    console.error('Erro ao enviar email:', error);
+    console.error('=== ERRO GERAL AO PROCESSAR REQUISIÇÃO ===');
+    console.error('Tipo de erro:', error.constructor.name);
+    console.error('Mensagem:', error.message);
+    console.error('Stack:', error.stack);
+    
+    // Verificar se é um erro da API MailerSend
+    const isMailerSendError = error.message && error.message.includes('MailerSend');
+    
+    // Criar resposta de erro detalhada
+    const errorResponse = {
+      message: 'Erro ao enviar email',
+      error: error.message,
+      errorType: error.constructor.name,
+      isMailerSendError: isMailerSendError,
+      timestamp: new Date().toISOString(),
+      requestId: event.headers['x-request-id'] || 'unknown'
+    };
+    
+    // Adicionar detalhes do erro se disponíveis
+    if (error.code) errorResponse.errorCode = error.code;
+    if (error.response) {
+      errorResponse.apiResponse = {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      };
+    }
+    
+    console.error('Resposta de erro que será enviada:', errorResponse);
     
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        message: 'Erro ao enviar email',
-        error: error.message,
-        stack: error.stack
-      })
+      body: JSON.stringify(errorResponse)
     };
   }
 };
