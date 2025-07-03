@@ -161,7 +161,7 @@ exports.handler = async (event, context) => {
     // Criar parâmetros do email
     const emailParams = new EmailParams()
       .setFrom(sentFrom)
-      .setRecipients(recipients)
+      .setTo(recipients)
       .setSubject(subject)
       .setHtml(html);
     
