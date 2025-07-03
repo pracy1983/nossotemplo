@@ -60,9 +60,17 @@ function createMailerSendClient() {
       fromName: config.fromName
     });
     
-    return new MailerSend({
+    // Inicializar o cliente MailerSend conforme a documentação mais recente
+    const mailerSend = new MailerSend({
       apiKey: config.apiKey
     });
+    
+    console.log('Cliente MailerSend criado:', {
+      hasEmailProperty: !!mailerSend.email,
+      clientType: typeof mailerSend
+    });
+    
+    return mailerSend;
   } catch (error) {
     console.error('Erro ao criar cliente MailerSend:', error);
     return null;
@@ -174,8 +182,15 @@ exports.handler = async (event, context) => {
 
     // Enviar email
     console.log('Enviando email via MailerSend...');
-    console.log('mailerSend:', mailerSend);
-    console.log('mailerSend.email:', mailerSend.email);
+    
+    // Verificar se o cliente tem a propriedade email
+    if (!mailerSend.email) {
+      console.error('Erro: mailerSend.email não está definido');
+      throw new Error('Cliente MailerSend inicializado incorretamente');
+    }
+    
+    // Enviar email usando a API correta
+    console.log('Chamando mailerSend.email.send()...');
     const response = await mailerSend.email.send(emailParams);
 
     console.log('Email enviado com sucesso:', response);
