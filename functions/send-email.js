@@ -70,12 +70,12 @@ function createMailerSendClient() {
       fromName: config.fromName
     });
     
-    // Inicializar o cliente MailerSend conforme a documentação mais recente
+    // Inicializar o cliente MailerSend conforme a versão do SDK instalada
     const mailerSend = new MailerSend({
-      api_key: process.env.MAILERSEND_API_KEY
+      apiKey: process.env.MAILERSEND_API_KEY
     });
     
-    console.log('MailerSend inicializado com API key diretamente do process.env.MAILERSEND_API_KEY');
+    console.log('MailerSend inicializado com apiKey (camelCase) diretamente do process.env.MAILERSEND_API_KEY');
     
     console.log('Cliente MailerSend criado:', {
       hasEmailProperty: !!mailerSend.email,
