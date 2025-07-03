@@ -2,6 +2,10 @@
 // @esbuild-external:mailersend
 const { MailerSend, EmailParams, Recipient, Sender } = require('mailersend');
 
+// Versão da biblioteca MailerSend para logs
+const mailersendVersion = require('mailersend/package.json').version || 'desconhecida';
+console.log(`=== INICIALIZANDO FUNÇÃO SERVERLESS COM MAILERSEND VERSÃO ${mailersendVersion} ===`);
+
 // Função para obter variáveis de ambiente (suporta tanto prefixo VITE_ quanto sem prefixo)
 const getEnvVar = (name) => {
   const value = process.env[name] || process.env[`VITE_${name}`] || '';
@@ -227,13 +231,29 @@ exports.handler = async (event, context) => {
         from: emailParams.from,
         to: emailParams.to,
         subject: emailParams.subject,
-        html: emailParams.html
+        html: emailParams.html ? 'HTML presente (não exibido por tamanho)' : 'HTML ausente'
       });
       
+      // Verificar se o cliente MailerSend está configurado corretamente
+      console.log('Estrutura do cliente MailerSend:', {
+        clientExists: !!mailerSend,
+        emailExists: !!mailerSend?.email,
+        sendExists: !!mailerSend?.email?.send,
+        sendIsFunction: typeof mailerSend?.email?.send === 'function'
+      });
+      
+      // Log da API key (apenas primeiros e últimos caracteres para segurança)
+      const apiKeyLength = apiKey?.length || 0;
+      const maskedApiKey = apiKeyLength > 10 ? 
+        `${apiKey.substring(0, 5)}...${apiKey.substring(apiKeyLength - 5)}` : 
+        'inválida';
+      console.log(`API Key configurada (mascarada): ${maskedApiKey}, tamanho: ${apiKeyLength}`);
+      
       // Enviar email usando a API correta
+      console.log('Iniciando envio de email...');
       const response = await mailerSend.email.send(emailParams);
       
-      console.log('Email enviado com sucesso:', response);
+      console.log('Email enviado com sucesso! Resposta:', JSON.stringify(response, null, 2));
       return {
         statusCode: 200,
         headers,
@@ -242,24 +262,52 @@ exports.handler = async (event, context) => {
           response: response
         })
       };
-    } catch (emailError) {
-      console.error('ERRO AO ENVIAR EMAIL VIA MAILERSEND:', emailError);
-      console.error('Detalhes do erro:', {
-        message: emailError.message,
-        name: emailError.name,
-        code: emailError.code,
-        stack: emailError.stack
-      });
+    } catch (error) {
+      console.error('=== ERRO AO ENVIAR EMAIL VIA MAILERSEND ===');
+      console.error('Erro original:', error);
       
-      if (emailError.response) {
-        console.error('Resposta da API:', {
-          status: emailError.response.status,
-          statusText: emailError.response.statusText,
-          data: emailError.response.data
+      // Inspecionar o objeto de erro completamente
+      console.error('Tipo de erro:', typeof error);
+      console.error('Erro é instância de Error?', error instanceof Error);
+      console.error('Propriedades do erro:', Object.keys(error || {}));
+      
+      if (error?.response) {
+        console.error('Erro tem resposta:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
         });
       }
       
-      throw new Error(`Erro ao enviar email via MailerSend: ${emailError.message}`);
+      if (error?.request) {
+        console.error('Erro tem request:', {
+          method: error.request.method,
+          path: error.request.path,
+          host: error.request.host
+        });
+      }
+      
+      // Tentar extrair mais informações do erro
+      const errorDetails = {
+        message: 'Erro ao enviar email',
+        error: `Erro ao enviar email via MailerSend: ${error?.message || JSON.stringify(error)}`,
+        errorType: error?.constructor?.name || typeof error,
+        isMailerSendError: true,
+        timestamp: new Date().toISOString(),
+        requestId: event.headers['x-request-id'] || 'unknown',
+        code: error?.code || 'unknown',
+        response: error?.response?.data || null,
+        stack: error?.stack || 'stack indisponível'
+      };
+      
+      console.error('Detalhes completos do erro:', JSON.stringify(errorDetails, null, 2));
+      
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify(errorDetails)
+      };
     }
   } catch (error) {
     console.error('=== ERRO GERAL AO PROCESSAR REQUISIÇÃO ===');
