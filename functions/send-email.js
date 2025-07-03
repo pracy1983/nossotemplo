@@ -174,6 +174,8 @@ exports.handler = async (event, context) => {
 
     // Enviar email
     console.log('Enviando email via MailerSend...');
+    console.log('mailerSend:', mailerSend);
+    console.log('mailerSend.email:', mailerSend.email);
     const response = await mailerSend.email.send(emailParams);
 
     console.log('Email enviado com sucesso:', response);
