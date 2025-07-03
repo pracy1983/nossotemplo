@@ -1,5 +1,5 @@
-// API para envio de emails
-const nodemailer = require('nodemailer');
+// API para envio de emails usando MailerSend
+const { MailerSend, EmailParams, Recipient } = require('mailersend');
 
 // Função para obter variáveis de ambiente (suporta tanto prefixo VITE_ quanto sem prefixo)
 const getEnvVar = (name) => {
@@ -8,8 +8,8 @@ const getEnvVar = (name) => {
   return value;
 };
 
-// Função para obter configuração SMTP das variáveis de ambiente
-function getSmtpConfig() {
+// Função para obter configuração do MailerSend
+function getMailerSendConfig() {
   // Log completo de todas as variáveis de ambiente disponíveis (sem valores sensíveis)
   console.log('=== TODAS AS VARIÁVEIS DE AMBIENTE DISPONÍVEIS ===');
   const envKeys = Object.keys(process.env);
@@ -22,69 +22,48 @@ function getSmtpConfig() {
     !key.includes('TOKEN')
   ));
   
-  // Verificar especificamente as variáveis SMTP
-  console.log('=== VERIFICAÇÃO DE VARIÁVEIS SMTP ===');
-  console.log('SMTP_HOST existe:', !!process.env.SMTP_HOST);
-  console.log('EMAIL_HOST existe:', !!process.env.EMAIL_HOST);
-  console.log('SMTP_PORT existe:', !!process.env.SMTP_PORT);
-  console.log('EMAIL_PORT existe:', !!process.env.EMAIL_PORT);
-  console.log('SMTP_USER existe:', !!process.env.SMTP_USER);
-  console.log('EMAIL_USER existe:', !!process.env.EMAIL_USER);
-  console.log('SMTP_PASSWORD existe:', !!process.env.SMTP_PASSWORD);
-  console.log('EMAIL_PASS existe:', !!process.env.EMAIL_PASS);
+  // Verificar especificamente as variáveis do MailerSend
+  console.log('=== VERIFICAÇÃO DE VARIÁVEIS MAILERSEND ===');
+  console.log('MAILERSEND_API_KEY existe:', !!process.env.MAILERSEND_API_KEY);
+  console.log('MAILERSEND_FROM_EMAIL existe:', !!process.env.MAILERSEND_FROM_EMAIL);
+  console.log('MAILERSEND_FROM_NAME existe:', !!process.env.MAILERSEND_FROM_NAME);
   
-  // Tentar obter configuração SMTP das variáveis de ambiente
-  // Suporta tanto variáveis com prefixo SMTP_ quanto EMAIL_
-  const host = process.env.SMTP_HOST || process.env.EMAIL_HOST || 'mail.aprendamagia.com.br';
-  const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '465', 10);
-  const user = process.env.SMTP_USER || process.env.EMAIL_USER || 'nossotemplo@aprendamagia.com.br';
+  // Obter configuração do MailerSend das variáveis de ambiente
+  const apiKey = process.env.MAILERSEND_API_KEY || 'mlsn.ca9538bfcab045c4e4163b83dc6b86e60e115acd0039606337f9146a3148e02b';
+  const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'nossotemplo@aprendamagia.com.br';
+  const fromName = process.env.MAILERSEND_FROM_NAME || 'Nosso Templo';
   
-  // IMPORTANTE: Usar senha fixa para teste se não encontrar nas variáveis de ambiente
-  const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || 'R5koP*sRbQtP';
-  
-  // Log dos valores que serão usados (sem exibir a senha completa)
-  console.log('=== CONFIGURAÇÃO SMTP QUE SERÁ USADA ===');
-  console.log('Host:', host);
-  console.log('Port:', port);
-  console.log('User:', user);
-  console.log('Pass definido:', !!pass);
-  console.log('Pass primeiros caracteres:', pass ? pass.substring(0, 3) + '***' : 'Não definido');
-  console.log('Secure:', port === 465);
+  // Log dos valores que serão usados (sem exibir a API key completa)
+  console.log('=== CONFIGURAÇÃO MAILERSEND QUE SERÁ USADA ===');
+  console.log('API Key definida:', !!apiKey);
+  console.log('API Key primeiros caracteres:', apiKey ? apiKey.substring(0, 10) + '***' : 'Não definido');
+  console.log('From Email:', fromEmail);
+  console.log('From Name:', fromName);
   
   return {
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    debug: true,
-    logger: true
+    apiKey,
+    fromEmail,
+    fromName
   };
 }
 
-// Função para criar o transporter sob demanda
-function createTransporter() {
+// Função para criar o cliente MailerSend
+function createMailerSendClient() {
   try {
-    // Obter configuração SMTP
-    const config = getSmtpConfig();
+    // Obter configuração do MailerSend
+    const config = getMailerSendConfig();
     
-    console.log('Criando transporter com configuração:', {
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      user: config.auth.user,
-      tls: config.tls,
-      debug: config.debug
+    console.log('Criando cliente MailerSend com configuração:', {
+      apiKeyDefined: !!config.apiKey,
+      fromEmail: config.fromEmail,
+      fromName: config.fromName
     });
     
-    return nodemailer.createTransport(config);
+    return new MailerSend({
+      apiKey: config.apiKey
+    });
   } catch (error) {
-    console.error('Erro ao criar transporter:', error);
+    console.error('Erro ao criar cliente MailerSend:', error);
     return null;
   }
 }
@@ -109,7 +88,7 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    console.log('Iniciando função de envio de email...');
+    console.log('Iniciando função de envio de email com MailerSend...');
     console.log('Headers da requisição:', JSON.stringify(event.headers));
     console.log('Método HTTP:', event.httpMethod);
     
@@ -153,70 +132,54 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Criar transporter sob demanda
-    const transporter = createTransporter();
+    // Criar cliente MailerSend
+    const mailerSend = createMailerSendClient();
     
-    // Verificar se o transporter foi criado corretamente
-    if (!transporter) {
-      console.error('Falha ao criar transporter');
+    // Verificar se o cliente foi criado corretamente
+    if (!mailerSend) {
+      console.error('Falha ao criar cliente MailerSend');
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ message: 'Falha ao criar transporter de email' })
+        body: JSON.stringify({ message: 'Falha ao criar cliente de email' })
       };
     }
 
-    // Verificar conexão SMTP
-    try {
-      console.log('Verificando conexão SMTP...');
-      await new Promise((resolve, reject) => {
-        transporter.verify(function (error, success) {
-          if (error) {
-            console.error('Erro na verificação SMTP:', error);
-            reject(error);
-          } else {
-            console.log('Servidor SMTP pronto para enviar mensagens');
-            resolve(success);
-          }
-        });
-      });
-    } catch (verifyError) {
-      console.error('Falha na verificação SMTP:', verifyError);
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          message: 'Falha na conexão com servidor SMTP', 
-          error: verifyError.message 
-        })
-      };
-    }
-
-    // Configurar email
-    const mailOptions = {
-      from: from || '"Nosso Templo" <nossotemplo@aprendamagia.com.br>',
-      to,
-      subject,
-      html
-    };
+    // Obter configuração do MailerSend
+    const config = getMailerSendConfig();
     
-    console.log('Opções de email configuradas:', { 
-      from: mailOptions.from, 
-      to: mailOptions.to, 
-      subject: mailOptions.subject 
+    // Configurar email usando MailerSend
+    console.log('Configurando email com MailerSend...');
+    
+    // Criar destinatário
+    const recipients = [new Recipient(to)];
+    
+    // Criar parâmetros do email
+    const emailParams = new EmailParams()
+      .setFrom(config.fromEmail)
+      .setFromName(config.fromName)
+      .setRecipients(recipients)
+      .setSubject(subject)
+      .setHtml(html);
+    
+    console.log('Parâmetros de email configurados:', { 
+      from: config.fromEmail, 
+      fromName: config.fromName,
+      to: to, 
+      subject: subject 
     });
 
     // Enviar email
-    console.log('Enviando email...');
-    const info = await transporter.sendMail(mailOptions);
+    console.log('Enviando email via MailerSend...');
+    const response = await mailerSend.send(emailParams);
 
-    console.log('Email enviado com sucesso:', info.messageId);
+    console.log('Email enviado com sucesso:', response);
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({ 
         message: 'Email enviado com sucesso',
-        messageId: info.messageId
+        response: response
       })
     };
   } catch (error) {
