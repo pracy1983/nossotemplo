@@ -30,7 +30,7 @@ function getMailerSendConfig() {
   console.log('MAILERSEND_FROM_NAME existe:', !!process.env.MAILERSEND_FROM_NAME);
   
   // Obter configuração do MailerSend das variáveis de ambiente
-  const apiKey = process.env.MAILERSEND_API_KEY || 'mlsn.ca9538bfcab045c4e4163b83dc6b86e60e115acd0039606337f9146a3148e02b';
+  const apiKey = process.env.MAILERSEND_API_KEY || 'mlsn.876d858a32a34748b252e99371185617dbacf1b9d106eb41004dc5fd6e58d6c2';
   const fromEmail = process.env.MAILERSEND_FROM_EMAIL || 'nossotemplo@aprendamagia.com.br';
   const fromName = process.env.MAILERSEND_FROM_NAME || 'Nosso Templo';
   
@@ -216,6 +216,15 @@ exports.handler = async (event, context) => {
     // Enviar email usando a API correta
     console.log('Chamando mailerSend.email.send()...');
     try {
+      // Verificar se o emailParams foi configurado corretamente
+      console.log('EmailParams configurado:', {
+        from: emailParams.from,
+        to: emailParams.to,
+        subject: emailParams.subject,
+        html: emailParams.html
+      });
+      
+      // Enviar email usando a API correta
       const response = await mailerSend.email.send(emailParams);
       
       console.log('Email enviado com sucesso:', response);
