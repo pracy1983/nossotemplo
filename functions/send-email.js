@@ -26,7 +26,10 @@ export async function handler(event, context) {
       body: JSON.stringify({ message: "Email enviado com sucesso.", response })
     };
   } catch (error) {
-    console.error("Erro completo:", JSON.stringify(error, null, 2));
+    console.error("Erro completo:", error);
+    if (error.response) {
+        error.response.json().then(data => console.error("Detalhe do erro MailerSend:", data));
+    }
     return {
       statusCode: 500,
       body: JSON.stringify({
