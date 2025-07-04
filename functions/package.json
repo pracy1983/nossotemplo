@@ -4,6 +4,7 @@
   "description": "Funções serverless para o Nosso Templo",
   "main": "index.js",
   "dependencies": {
+    "mailersend": "^2.6.0",
     "nodemailer": "^6.9.1"
   }
 }
