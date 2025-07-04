@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import LoginForm from './components/auth/LoginForm';
 import AdminPanel from './components/admin/AdminPanel';
 import StudentProfile from './components/student/StudentProfile';
+import ConvitePage from './components/auth/ConvitePage';
 import Layout from './components/common/Layout';
 import { checkSupabaseConnection } from './utils/checkConnection';
 import { ToastContainer } from 'react-toastify';
@@ -116,12 +118,17 @@ const AppContent: React.FC = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <DataProvider>
-        <AppContent />
-        <ToastContainer position="top-right" autoClose={5000} />
-      </DataProvider>
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <DataProvider>
+          <Routes>
+            <Route path="/convite/:token" element={<ConvitePage />} />
+            <Route path="/*" element={<AppContent />} />
+          </Routes>
+          <ToastContainer position="top-right" autoClose={5000} />
+        </DataProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
