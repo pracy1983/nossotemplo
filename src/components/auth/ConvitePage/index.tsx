@@ -108,21 +108,20 @@ const ConvitePage: React.FC = () => {
     try {
       const supabase = await supabaseManager.getClient();
       
-      // Atualizar o status do convite e definir a senha
-      const { error } = await supabase
+      // Atualizar o status do convite na tabela students
+      const { error: updateError } = await supabase
         .from('students')
         .update({
           invite_status: 'accepted',
-          password: formData.password, // Nota: Em produção, isso deve ser feito com hash seguro
           updated_at: new Date().toISOString()
         })
         .eq('invite_token', token);
       
-      if (error) {
-        throw error;
+      if (updateError) {
+        throw updateError;
       }
       
-      toast.success('Senha definida com sucesso! Você pode fazer login agora.');
+      toast.success('Convite aceito com sucesso! Você pode fazer login agora usando seu email e a senha que acabou de definir.');
       
       // Redirecionar para a página de login após 2 segundos
       setTimeout(() => {
@@ -130,8 +129,8 @@ const ConvitePage: React.FC = () => {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Erro ao definir senha:', error);
-      toast.error(`Erro ao definir senha: ${error.message || 'Ocorreu um erro desconhecido'}`);
+      console.error('Erro ao aceitar convite:', error);
+      toast.error(`Erro ao aceitar convite: ${error.message || 'Ocorreu um erro desconhecido'}`);
     } finally {
       setIsSubmitting(false);
     }
