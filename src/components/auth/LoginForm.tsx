@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'react-toastify';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -8,9 +10,37 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [showSetupInfo, setShowSetupInfo] = useState(false);
   
   const { login } = useAuth();
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Por favor, digite seu email para redefinir a senha.');
+      return;
+    }
+
+    setIsResettingPassword(true);
+    setError('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Email de redefinição de senha enviado. Verifique sua caixa de entrada.');
+    } catch (error: any) {
+      console.error('Erro ao solicitar redefinição de senha:', error);
+      setError(`Erro ao solicitar redefinição de senha: ${error.message}`);
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +187,18 @@ const LoginForm: React.FC = () => {
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </button>
+            
+            {/* Forgot Password Link */}
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={isResettingPassword}
+                className="text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                {isResettingPassword ? 'Enviando...' : 'Esqueci minha senha'}
+              </button>
+            </div>
           </form>
 
 

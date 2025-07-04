@@ -6,6 +6,7 @@ import LoginForm from './components/auth/LoginForm';
 import AdminPanel from './components/admin/AdminPanel';
 import StudentProfile from './components/student/StudentProfile';
 import ConvitePage from './components/auth/ConvitePage';
+import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import Layout from './components/common/Layout';
 import { checkSupabaseConnection } from './utils/checkConnection';
 import { ToastContainer } from 'react-toastify';
@@ -123,6 +124,7 @@ function App() {
         <DataProvider>
           <Routes>
             <Route path="/convite/:token" element={<ConvitePage />} />
+            <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
             <Route path="/*" element={<AppContent />} />
           </Routes>
           <ToastContainer position="top-right" autoClose={5000} />

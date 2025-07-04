@@ -544,6 +544,8 @@ export const deleteStudent = async (id: string): Promise<void> => {
   }
 };
 
+import { SITE_CONFIG } from '../config/site';
+
 // Invite operations
 export const sendStudentInvite = async (inviteData: InviteData): Promise<string> => {
   try {
@@ -584,7 +586,7 @@ export const sendStudentInvite = async (inviteData: InviteData): Promise<string>
     await createStudent(studentData as Student);
 
     // Enviar email de convite
-    const inviteUrl = `${window.location.origin || 'https://nossotemplo.vercel.app'}/convite/${inviteToken}`;
+    const inviteUrl = `${window.location.origin || SITE_CONFIG.BASE_URL}${SITE_CONFIG.ROUTES.INVITE}/${inviteToken}`;
     
     try {
       // Tentar enviar email real

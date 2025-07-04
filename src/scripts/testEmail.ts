@@ -1,4 +1,5 @@
 import { sendEmail, sendPasswordResetEmail, sendInviteEmail } from '../services/emailServiceFrontend';
+import { SITE_CONFIG } from '../config/site';
 
 // Função para testar o envio de email
 async function testEmail() {
@@ -18,7 +19,7 @@ async function testEmail() {
     console.log('2. Enviando email de redefinição de senha...');
     await sendPasswordResetEmail(
       'pracy1983@gmail.com',
-      'https://nossotemplo.vercel.app/reset-password?token=123456',
+      `${SITE_CONFIG.BASE_URL}${SITE_CONFIG.ROUTES.RESET_PASSWORD}?token=123456`,
       'Usuário Teste'
     );
     console.log('✓ Email de redefinição de senha enviado com sucesso!');
@@ -27,7 +28,7 @@ async function testEmail() {
     console.log('3. Enviando email de convite...');
     await sendInviteEmail(
       'pracy1983@gmail.com',
-      'https://nossotemplo.vercel.app/convite/123456',
+      `${SITE_CONFIG.BASE_URL}${SITE_CONFIG.ROUTES.INVITE}/123456`,
       'Usuário Convidado'
     );
     console.log('✓ Email de convite enviado com sucesso!');
