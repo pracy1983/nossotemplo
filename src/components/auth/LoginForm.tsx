@@ -21,24 +21,39 @@ const LoginForm: React.FC = () => {
       return;
     }
 
+    console.log('[ResetPassword] Iniciando processo de redefinição para:', email);
+    console.log('[ResetPassword] URL de redirecionamento:', `${window.location.origin}/redefinir-senha`);
+    
     setIsResettingPassword(true);
     setError('');
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      console.log('[ResetPassword] Chamando Supabase auth.resetPasswordForEmail...');
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/redefinir-senha`,
       });
 
+      console.log('[ResetPassword] Resposta do Supabase:', { data, error });
+
       if (error) {
+        console.error('[ResetPassword] Erro retornado pelo Supabase:', error);
         throw error;
       }
 
+      console.log('[ResetPassword] Email enviado com sucesso!');
       toast.success('Email de redefinição de senha enviado. Verifique sua caixa de entrada.');
     } catch (error: any) {
-      console.error('Erro ao solicitar redefinição de senha:', error);
+      console.error('[ResetPassword] Erro ao solicitar redefinição de senha:', error);
+      console.error('[ResetPassword] Detalhes do erro:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        stack: error.stack
+      });
       setError(`Erro ao solicitar redefinição de senha: ${error.message}`);
     } finally {
       setIsResettingPassword(false);
+      console.log('[ResetPassword] Processo finalizado');
     }
   };
 
