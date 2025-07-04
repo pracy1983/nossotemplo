@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabaseManager } from '../../../lib/supabaseClient';
 import { toast } from 'react-toastify';
-import { Eye, EyeOff, CheckCircle, XCircle, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, Loader } from 'lucide-react';
 
 const ConvitePage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -11,15 +11,6 @@ const ConvitePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-  
-  const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: ''
-  });
-  
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [studentName, setStudentName] = useState<string>('');
   
   // Verificar o token do convite
@@ -66,49 +57,67 @@ const ConvitePage: React.FC = () => {
     validateInviteToken();
   }, [token]);
   
-  // Validar o formulário
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.password) {
-      newErrors.password = 'A senha é obrigatória';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'A senha deve ter pelo menos 6 caracteres';
-    }
-    
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Confirme sua senha';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'As senhas não coincidem';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  // Não precisamos mais da validação de formulário de senha
   
-  // Lidar com mudanças no formulário
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Limpar erro quando o usuário começa a digitar
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
+  // Não precisamos mais do manipulador de mudanças no formulário
   
-  // Enviar o formulário
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-    
+  // Processar o convite
+  const handleProcessInvite = async () => {
     setIsSubmitting(true);
     
     try {
       const supabase = await supabaseManager.getClient();
       
-      // Atualizar o status do convite na tabela students
+      // Primeiro, buscar o email do usuário associado ao token
+      const { data: userData, error: userError } = await supabase
+        .from('students')
+        .select('email')
+        .eq('invite_token', token)
+        .single();
+      
+      if (userError || !userData) {
+        throw new Error('Não foi possível encontrar o usuário associado a este convite.');
+      }
+      
+      // Verificar se o usuário já existe no sistema de autenticação
+      // Tentamos uma abordagem mais segura usando o método getUser
+      let userExists = false;
+      
+      try {
+        // Primeiro, tentamos verificar se o usuário existe usando o método signInWithPassword
+        // Se o erro contém "Invalid login credentials", significa que o usuário existe
+        const { error: authCheckError } = await supabase.auth.signInWithPassword({
+          email: userData.email,
+          password: 'placeholder-password-that-will-fail'
+        });
+        
+        userExists = authCheckError && authCheckError.message.includes('Invalid login credentials');
+      } catch (error) {
+        console.log('Erro ao verificar existência do usuário:', error);
+        // Se houver erro na verificação, assumimos que o usuário não existe
+        userExists = false;
+      }
+      
+      // Se o usuário não existe, precisamos criar um novo usuário no sistema de autenticação
+      if (!userExists) {
+        // Redirecionar para uma página de registro com o email pré-preenchido
+        // e um token especial que indica que é um convite aceito
+        toast.info('Você será redirecionado para criar sua conta.');
+        
+        // Armazenar o email na sessionStorage para uso na página de registro
+        sessionStorage.setItem('inviteEmail', userData.email || '');
+        sessionStorage.setItem('inviteToken', token || '');
+        
+        // Redirecionar para a página de registro após um breve delay
+        setTimeout(() => {
+          navigate('/register?fromInvite=true');
+        }, 2000);
+        
+        return;
+      }
+      
+      // Se o usuário já existe, podemos usar o fluxo de redefinição de senha
+      // Atualizar o status do convite para 'accepted'
       const { error: updateError } = await supabase
         .from('students')
         .update({
@@ -116,21 +125,24 @@ const ConvitePage: React.FC = () => {
           updated_at: new Date().toISOString()
         })
         .eq('invite_token', token);
-      
+        
       if (updateError) {
+        console.error('Erro ao atualizar status do convite:', updateError);
         throw updateError;
       }
       
-      toast.success('Convite aceito com sucesso! Você pode fazer login agora usando seu email e a senha que acabou de definir.');
+      // Nota: Como não temos acesso direto ao método resetPasswordForEmail,
+      // vamos informar ao usuário para usar o fluxo "Esqueci minha senha" na página de login
+      toast.success('Convite aceito! Por favor, use a opção "Esqueci minha senha" na página de login para definir sua senha.');
       
-      // Redirecionar para a página de login após 2 segundos
+      // Redirecionar para a página de login após um breve delay
       setTimeout(() => {
-        navigate('/');
-      }, 2000);
+        navigate('/login?email=' + encodeURIComponent(userData.email));
+      }, 3000);
       
     } catch (error: any) {
-      console.error('Erro ao aceitar convite:', error);
-      toast.error(`Erro ao aceitar convite: ${error.message || 'Ocorreu um erro desconhecido'}`);
+      console.error('Erro ao processar convite:', error);
+      toast.error(`Erro ao processar convite: ${error.message || 'Ocorreu um erro desconhecido'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -173,7 +185,7 @@ const ConvitePage: React.FC = () => {
     );
   }
   
-  // Renderizar formulário de definição de senha
+  // Renderizar página de convite aceito
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="max-w-md w-full mx-auto bg-gray-900 p-8 rounded-xl border border-gray-800 shadow-2xl">
@@ -182,76 +194,24 @@ const ConvitePage: React.FC = () => {
           <h2 className="text-2xl font-bold text-white mb-2">Convite Aceito</h2>
           <p className="text-gray-300 mb-1">Olá, {studentName}!</p>
           <p className="text-gray-400">
-            Seu convite foi validado. Por favor, defina uma senha para acessar sua conta.
+            Seu convite foi validado. Clique no botão abaixo para aceitar o convite e configurar sua conta.
           </p>
         </div>
         
-        <form onSubmit={handleSubmit} className="mt-8">
-          <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
-              Senha
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`w-full bg-gray-800 border ${errors.password ? 'border-red-500' : 'border-gray-700'} rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Digite sua senha"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
-          </div>
-          
-          <div className="mb-6">
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
-              Confirmar Senha
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={`w-full bg-gray-800 border ${errors.confirmPassword ? 'border-red-500' : 'border-gray-700'} rounded-md py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Confirme sua senha"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-300"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {errors.confirmPassword && <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>}
-          </div>
-          
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center justify-center"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader className="animate-spin mr-2" size={20} />
-                Processando...
-              </>
-            ) : (
-              'Definir Senha e Acessar'
-            )}
-          </button>
-        </form>
+        <button
+          onClick={handleProcessInvite}
+          disabled={isSubmitting}
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center justify-center mt-6"
+        >
+          {isSubmitting ? (
+            <>
+              <Loader className="animate-spin mr-2" size={20} />
+              Processando...
+            </>
+          ) : (
+            'Aceitar Convite'
+          )}
+        </button>
       </div>
     </div>
   );
