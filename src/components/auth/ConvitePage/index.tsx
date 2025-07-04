@@ -38,8 +38,8 @@ const ConvitePage: React.FC = () => {
         // Buscar o convite pelo token
         const { data, error } = await supabase
           .from('students')
-          .select('fullName, inviteStatus, inviteToken')
-          .eq('inviteToken', token)
+          .select('full_name, invite_status, invite_token')
+          .eq('invite_token', token)
           .single();
         
         if (error || !data) {
@@ -49,11 +49,11 @@ const ConvitePage: React.FC = () => {
         }
         
         // Verificar se o convite é válido (status pending)
-        if (data.inviteStatus !== 'pending') {
+        if (data.invite_status !== 'pending') {
           setIsValidToken(false);
         } else {
           setIsValidToken(true);
-          setStudentName(data.fullName);
+          setStudentName(data.full_name);
         }
       } catch (error) {
         console.error('Erro ao processar convite:', error);
@@ -112,11 +112,11 @@ const ConvitePage: React.FC = () => {
       const { error } = await supabase
         .from('students')
         .update({
-          inviteStatus: 'accepted',
+          invite_status: 'accepted',
           password: formData.password, // Nota: Em produção, isso deve ser feito com hash seguro
-          updatedAt: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
-        .eq('inviteToken', token);
+        .eq('invite_token', token);
       
       if (error) {
         throw error;
