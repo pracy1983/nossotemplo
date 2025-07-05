@@ -17,6 +17,15 @@ const ResetPasswordPage: React.FC = () => {
 
   // Verificar se o usuário está autenticado com um token de redefinição de senha
   useEffect(() => {
+  // DEBUG: Diagnóstico detalhado do fluxo de redefinição
+  console.log('=== DEBUG RESET PASSWORD ===');
+  console.log('Current URL:', window.location.href);
+  console.log('Search params:', location.search);
+  console.log('Hash params:', window.location.hash);
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+  console.log('Access token:', hashParams.get('access_token'));
+  console.log('Type:', hashParams.get('type'));
+  console.log('================================');
     const verifyToken = async () => {
       console.log('Verificando token de redefinição...');
       console.log('URL atual:', window.location.href);

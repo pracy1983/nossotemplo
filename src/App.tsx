@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DataProvider, useData } from './contexts/DataContext';
 import LoginForm from './components/auth/LoginForm';
@@ -11,8 +11,13 @@ import Layout from './components/common/Layout';
 import { checkSupabaseConnection } from './utils/checkConnection';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import PrivateRoute from './components/auth/PrivateRoute';
 
-const AppContent: React.FC = () => {
+/**
+ * Dashboard - Componente principal para usuários autenticados
+ * Renderiza AdminPanel para admins ou StudentProfile para alunos
+ */
+const Dashboard: React.FC = () => {
   const { user, isLoading } = useAuth();
   const { loading: dataLoading, error: dataError } = useData();
   const [connectionStatus, setConnectionStatus] = useState<{success: boolean; message: string; details?: any}>({ success: false, message: 'Verificando conexão...' });
@@ -98,11 +103,8 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <LoginForm />;
-  }
-
-  if (user.isAdmin) {
+  // Usuário está autenticado, verificar tipo
+  if (user?.isAdmin) {
     return (
       <Layout showSidebar={false}>
         <AdminPanel />
@@ -110,10 +112,33 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Usuário comum (aluno)
   return (
     <Layout showSidebar={false}>
       <StudentProfile />
     </Layout>
+  );
+};
+
+/**
+ * NotFoundPage - Página 404 para rotas não encontradas
+ */
+const NotFoundPage: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-center max-w-md mx-auto p-6">
+        <div className="bg-red-600/10 border border-red-600/20 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Página não encontrada</h2>
+          <p className="text-gray-300 mb-6">A página que você está procurando não existe.</p>
+          <a 
+            href="/" 
+            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors text-white inline-block"
+          >
+            Voltar para o início
+          </a>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -123,9 +148,41 @@ function App() {
       <AuthProvider>
         <DataProvider>
           <Routes>
+            {/* Rotas públicas - acessíveis sem autenticação */}
+            <Route path="/login" element={<LoginForm />} />
             <Route path="/convite/:token" element={<ConvitePage />} />
             <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
-            <Route path="/*" element={<AppContent />} />
+            
+            {/* Rota inicial - redireciona para dashboard se autenticado, ou login se não */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            } />
+            
+            {/* Rotas privadas - protegidas por autenticação */}
+            <Route path="/dashboard" element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            } />
+            <Route path="/admin/*" element={
+              <PrivateRoute>
+                <Layout showSidebar={false}>
+                  <AdminPanel />
+                </Layout>
+              </PrivateRoute>
+            } />
+            <Route path="/perfil" element={
+              <PrivateRoute>
+                <Layout showSidebar={false}>
+                  <StudentProfile />
+                </Layout>
+              </PrivateRoute>
+            } />
+            
+            {/* Página 404 para rotas não encontradas */}
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <ToastContainer position="top-right" autoClose={5000} />
         </DataProvider>
