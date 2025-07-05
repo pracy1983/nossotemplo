@@ -24,6 +24,7 @@ const ResetPasswordPage: React.FC = () => {
 
         const token = searchParams.get('access_token') || hashParams.get('access_token');
         const type = searchParams.get('type') || hashParams.get('type');
+        const refresh_token = searchParams.get('refresh_token') || hashParams.get('refresh_token') || '';
 
         if (!token) {
           console.error('Token de acesso não encontrado na URL');
@@ -40,6 +41,21 @@ const ResetPasswordPage: React.FC = () => {
         }
 
         console.log('Token de recuperação válido encontrado');
+        
+        // IMPORTANTE: Inicializar a sessão com o token de recuperação
+        // Isso resolve o erro "Auth session missing!"
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: token,
+          refresh_token: refresh_token
+        });
+        
+        if (sessionError) {
+          console.error('Erro ao inicializar sessão de recuperação:', sessionError);
+          toast.error('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
+          navigate('/login');
+          return;
+        }
+        
         setAccessToken(token);
         setTokenVerified(true);
       } catch (error) {
