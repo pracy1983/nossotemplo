@@ -11,22 +11,103 @@ const ResetPasswordPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [tokenVerified, setTokenVerified] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Verificar se o usuário está autenticado com um token de redefinição de senha
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+    const verifyToken = async () => {
+      console.log('Verificando token de redefinição...');
+      console.log('URL atual:', window.location.href);
+      console.log('Search params:', location.search);
+      console.log('Hash da URL:', location.hash);
       
-      // Se não houver sessão ou o usuário não estiver em modo de recuperação, redirecionar para login
-      if (!data.session || !location.hash.includes('type=recovery')) {
-        toast.error('Link de redefinição de senha inválido ou expirado.');
+      try {
+        // Extrair o token da URL
+        const searchParams = new URLSearchParams(location.search);
+        const hashParams = new URLSearchParams(location.hash.replace('#', ''));
+        
+        // Verificar se temos um token de acesso na URL
+        const accessToken = searchParams.get('access_token') || hashParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token') || hashParams.get('refresh_token');
+        const type = searchParams.get('type') || hashParams.get('type');
+        
+        console.log('Parâmetros encontrados:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+        
+        if (type === 'recovery') {
+          console.log('Token de recuperação encontrado na URL');
+          
+          // Verificar se há uma sessão ativa
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Erro ao verificar sessão:', error);
+            throw error;
+          }
+          
+          console.log('Dados da sessão:', data);
+          
+          if (data.session) {
+            console.log('Sessão ativa encontrada');
+            setTokenVerified(true);
+            return;
+          }
+          
+          // Se não houver sessão mas temos tokens na URL, tentar estabelecer uma sessão
+          if (accessToken) {
+            console.log('Tentando estabelecer sessão com o token de acesso...');
+            
+            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || ''
+            });
+            
+            if (sessionError) {
+              console.error('Erro ao estabelecer sessão com token:', sessionError);
+              throw sessionError;
+            }
+            
+            if (sessionData.session) {
+              console.log('Sessão estabelecida com sucesso usando token da URL');
+              setTokenVerified(true);
+              return;
+            }
+          }
+          
+          // Se chegamos aqui, não conseguimos estabelecer uma sessão
+          throw new Error('Não foi possível verificar o token de recuperação');
+        } else {
+          // Verificar se há um token de recuperação no hash (formato antigo)
+          if (location.hash.includes('type=recovery')) {
+            console.log('Token de recuperação encontrado no formato antigo');
+            
+            // Verificar a sessão
+            const { data, error } = await supabase.auth.getSession();
+            
+            if (error) {
+              console.error('Erro ao verificar sessão:', error);
+              throw error;
+            }
+            
+            if (data.session) {
+              console.log('Sessão ativa encontrada');
+              setTokenVerified(true);
+              return;
+            }
+          }
+          
+          console.error('Token de recuperação não encontrado na URL');
+          throw new Error('Link de redefinição de senha inválido');
+        }
+      } catch (error: any) {
+        console.error('Erro ao verificar token de recuperação de senha:', error);
+        toast.error('Link de redefinição de senha expirado ou inválido.');
         navigate('/login');
       }
     };
     
-    checkSession();
+    verifyToken();
   }, [navigate, location]);
 
   const validatePassword = (password: string): boolean => {
@@ -50,16 +131,44 @@ const ResetPasswordPage: React.FC = () => {
     }
 
     setIsLoading(true);
+    console.log('Iniciando processo de redefinição de senha...');
 
     try {
+      if (!tokenVerified) {
+        console.error('Token não verificado');
+        throw new Error('Token de redefinição não verificado. Por favor, solicite um novo link.');
+      }
+      
+      // Verificar a sessão atual
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Erro ao verificar sessão:', sessionError);
+        throw new Error('Não foi possível verificar a sessão. Tente novamente.');
+      }
+      
+      if (!sessionData.session) {
+        console.error('Nenhuma sessão ativa encontrada');
+        throw new Error('Sessão expirada. Por favor, solicite um novo link de redefinição de senha.');
+      }
+      
+      console.log('Sessão válida encontrada, atualizando senha...');
+      
       // Atualizar a senha
-      const { error } = await supabase.auth.updateUser({
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Erro ao atualizar a senha:', updateError);
+        throw updateError;
+      }
 
+      console.log('Senha atualizada com sucesso!');
       toast.success('Senha redefinida com sucesso!');
+      
+      // Fazer logout para limpar a sessão
+      await supabase.auth.signOut();
       
       // Redirecionar para o login após 2 segundos
       setTimeout(() => {
@@ -68,7 +177,18 @@ const ResetPasswordPage: React.FC = () => {
       
     } catch (error: any) {
       console.error('Erro ao redefinir senha:', error);
-      setError(`Erro ao redefinir senha: ${error.message}`);
+      
+      // Mensagens de erro mais amigáveis
+      let errorMessage = 'Ocorreu um erro ao redefinir sua senha.';
+      
+      if (error.message.includes('Auth session missing')) {
+        errorMessage = 'Sessão expirada. Por favor, solicite um novo link de redefinição de senha.';
+      } else if (error.message.includes('password')) {
+        errorMessage = 'A senha fornecida não atende aos requisitos de segurança.';
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

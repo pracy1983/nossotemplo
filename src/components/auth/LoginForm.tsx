@@ -22,26 +22,54 @@ const LoginForm: React.FC = () => {
     }
 
     console.log('[ResetPassword] Iniciando processo de redefinição para:', email);
-    console.log('[ResetPassword] URL de redirecionamento:', `${window.location.origin}/redefinir-senha`);
+    // Garantir que a URL de redirecionamento esteja completa e correta
+    const redirectUrl = `${window.location.origin}/redefinir-senha`;
+    console.log('[ResetPassword] URL de redirecionamento:', redirectUrl);
     
     setIsResettingPassword(true);
     setError('');
 
     try {
-      console.log('[ResetPassword] Chamando Supabase auth.resetPasswordForEmail...');
+      // Primeiro, verificar se o email existe no sistema
+      console.log('[ResetPassword] Verificando se o email existe no sistema...');
+      const { data: userData, error: userError } = await supabase
+        .from('students')
+        .select('email')
+        .eq('email', email)
+        .single();
+
+      if (userError || !userData) {
+        console.error('[ResetPassword] Email não encontrado no sistema:', email);
+        // Não revelar que o email não existe por questões de segurança
+        toast.success('Se o email estiver cadastrado, você receberá um link para redefinir sua senha.');
+        return;
+      }
+
+      console.log('[ResetPassword] Email encontrado, enviando link de redefinição...');
+      
+      // Enviar o email de redefinição de senha
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+        redirectTo: redirectUrl
       });
 
       console.log('[ResetPassword] Resposta do Supabase:', { data, error });
 
       if (error) {
         console.error('[ResetPassword] Erro retornado pelo Supabase:', error);
-        throw error;
+        
+        // Tratar erros específicos
+        if (error.message.includes('rate limit')) {
+          throw new Error('Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.');
+        } else if (error.message.includes('email not found')) {
+          // Não revelar que o email não existe por questões de segurança
+          console.log('[ResetPassword] Email não encontrado no Supabase Auth');
+        } else {
+          throw error;
+        }
       }
 
       console.log('[ResetPassword] Email enviado com sucesso!');
-      toast.success('Email de redefinição de senha enviado. Verifique sua caixa de entrada.');
+      toast.success('Se o email estiver cadastrado, você receberá um link para redefinir sua senha em instantes.');
     } catch (error: any) {
       console.error('[ResetPassword] Erro ao solicitar redefinição de senha:', error);
       console.error('[ResetPassword] Detalhes do erro:', {
