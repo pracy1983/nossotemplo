@@ -10,6 +10,8 @@ export interface MockSupabaseClient {
     getUser: () => Promise<{ data: { user: any } | null; error: any }>;
     signInWithPassword: (credentials: { email: string; password: string }) => Promise<{ data: any; error: any }>;
     signOut: () => Promise<{ error: any }>;
+    setSession: (session: { access_token: string; refresh_token?: string }) => Promise<{ data: any; error: any }>;
+    updateUser: (attributes: { password?: string }) => Promise<{ data: any; error: any }>;
   };
 }
 
@@ -201,41 +203,71 @@ export function createMockClient(): MockSupabaseClient {
       }
     }),
     auth: {
-      getUser: () => {
+      getUser: async () => {
         console.log('[MOCK] Auth.getUser()');
-        return Promise.resolve({ data: { user: null }, error: null });
+        return {
+          data: { user: null },
+          error: null
+        };
       },
-      signInWithPassword: ({ email }: { email: string; password: string }) => {
-        console.log(`[MOCK] Auth.signInWithPassword(${email})`);
-        // Aceitar qualquer credencial, mas dar tratamento especial para alguns emails conhecidos
-        if (email === 'paularacy@gmail.com' || email.includes('admin') || email.includes('paula')) {
-          return Promise.resolve({
+      signInWithPassword: async (credentials: { email: string; password: string }) => {
+        console.log('[MOCK] Auth.signInWithPassword', credentials.email);
+        const user = mockData.students.find(s => s.email === credentials.email);
+        
+        if (user) {
+          return {
             data: {
               user: {
-                id: 'mock-admin-id',
-                email: email,
-                user_metadata: { is_admin: true }
+                id: user.id,
+                email: user.email,
+                user_metadata: {
+                  full_name: user.full_name,
+                  is_admin: user.is_admin
+                }
               }
             },
             error: null
-          });
-        } else {
-          // Para outros emails, criar um usuário não-admin
-          return Promise.resolve({
-            data: {
-              user: {
-                id: 'mock-student-id-' + Date.now(),
-                email: email,
-                user_metadata: { is_admin: false }
-              }
-            },
-            error: null
-          });
+          };
         }
+        
+        return {
+          data: null,
+          error: {
+            message: 'Invalid login credentials'
+          }
+        };
       },
-      signOut: () => {
+      signOut: async () => {
         console.log('[MOCK] Auth.signOut()');
-        return Promise.resolve({ error: null });
+        return { error: null };
+      },
+      setSession: async (session: { access_token: string; refresh_token?: string }) => {
+        console.log('[MOCK] Auth.setSession', session);
+        return {
+          data: {
+            session: {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token || '',
+              user: {
+                id: 'mock-user-id',
+                email: 'mock@example.com'
+              }
+            }
+          },
+          error: null
+        };
+      },
+      updateUser: async (attributes: { password?: string }) => {
+        console.log('[MOCK] Auth.updateUser', attributes);
+        return {
+          data: {
+            user: {
+              id: 'mock-user-id',
+              email: 'mock@example.com'
+            }
+          },
+          error: null
+        };
       }
     }
   };

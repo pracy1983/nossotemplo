@@ -152,7 +152,11 @@ class SupabaseManager {
     if (supabaseUrl && supabaseAnonKey) {
       try {
         const client = createClient<DatabaseTypes>(supabaseUrl, supabaseAnonKey, {
-          auth: { persistSession: true }
+          auth: { 
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true // Importante para detectar tokens na URL
+          }
         });
         
         this._client = client;
@@ -194,9 +198,13 @@ class SupabaseManager {
         throw new Error('Variáveis de ambiente do Supabase não encontradas');
       }
       
-      // Criar o cliente com configuração mínima
+      // Criar o cliente com configuração completa para autenticação
       const client = createClient<DatabaseTypes>(supabaseUrl, supabaseAnonKey, {
-        auth: { persistSession: true }
+        auth: { 
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true // Importante para detectar tokens na URL
+        }
       });
       
       // Testar a conexão para garantir que o cliente foi inicializado corretamente

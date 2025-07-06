@@ -19,12 +19,21 @@ const ResetPasswordPage: React.FC = () => {
   useEffect(() => {
     const verifyToken = async () => {
       try {
+        // Extrair parâmetros da URL (tanto da query string quanto do hash)
         const searchParams = new URLSearchParams(location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
 
-        const token = searchParams.get('access_token') || hashParams.get('access_token');
-        const type = searchParams.get('type') || hashParams.get('type');
-        const refresh_token = searchParams.get('refresh_token') || hashParams.get('refresh_token') || '';
+        console.log('Verificando token na URL...');
+        console.log('Hash da URL:', window.location.hash);
+        console.log('Query string:', location.search);
+
+        // Tentar obter o token primeiro do hash (formato padrão do Supabase) e depois da query string
+        const token = hashParams.get('access_token') || searchParams.get('access_token');
+        const type = hashParams.get('type') || searchParams.get('type');
+        const refresh_token = hashParams.get('refresh_token') || searchParams.get('refresh_token') || '';
+
+        console.log('Token encontrado:', token ? 'Sim' : 'Não');
+        console.log('Tipo do token:', type);
 
         if (!token) {
           console.error('Token de acesso não encontrado na URL');
@@ -40,7 +49,7 @@ const ResetPasswordPage: React.FC = () => {
           return;
         }
 
-        console.log('Token de recuperação válido encontrado');
+        console.log('Token de recuperação válido encontrado, inicializando sessão...');
         
         // IMPORTANTE: Inicializar a sessão com o token de recuperação
         // Isso resolve o erro "Auth session missing!"
@@ -56,6 +65,7 @@ const ResetPasswordPage: React.FC = () => {
           return;
         }
         
+        console.log('Sessão inicializada com sucesso!');
         setAccessToken(token);
         setTokenVerified(true);
       } catch (error) {
