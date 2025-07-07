@@ -13,6 +13,26 @@ const ConvitePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [studentName, setStudentName] = useState<string>('');
   
+  // Detectar e redirecionar tokens de redefinição de senha
+  useEffect(() => {
+    // Verificar se o token está no formato de token de redefinição de senha
+    if (token && token.startsWith('token-')) {
+      console.log('Detectado token de redefinição de senha no formato incorreto:', token);
+      
+      // Extrair o token numérico
+      const tokenValue = token.replace('token-', '');
+      console.log('Valor do token extraído:', tokenValue);
+      
+      // Redirecionar para a página de redefinição de senha com o formato correto
+      const redirectUrl = `/redefinir-senha#access_token=${tokenValue}&type=recovery`;
+      console.log('Redirecionando para:', redirectUrl);
+      
+      // Usar window.location para garantir um redirecionamento completo
+      window.location.href = redirectUrl;
+      return;
+    }
+  }, [token]);
+  
   // Verificar o token do convite
   useEffect(() => {
     const validateInviteToken = async () => {
