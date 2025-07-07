@@ -91,17 +91,52 @@ const ResetPasswordPage: React.FC = () => {
     // Função auxiliar para processar o token e inicializar a sessão
     const processToken = async (token: string, type: string, refresh_token: string) => {
       console.log('Processando token de recuperação...');
+      console.log('Token recebido:', token);
+      console.log('Tipo do token:', type);
       
       try {
-        // IMPORTANTE: Inicializar a sessão com o token de recuperação
-        console.log('Inicializando sessão com o token...');
+        // Usar o método setSession que é compatível com a versão 2.50.3 do Supabase
+        console.log('Tentando inicializar sessão com o token...');
+        
+        // Verificar se o token é um token JWT válido ou apenas um identificador
+        if (token.length < 30) {
+          console.log('Token parece ser um identificador simples, não um JWT válido');
+          
+          // Se for apenas um identificador, podemos tentar usar o token como parte de uma URL de callback
+          // que o Supabase possa reconhecer
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          if (!userError && userData?.user) {
+            console.log('Usuário já está autenticado:', userData.user);
+            setAccessToken(token);
+            setTokenVerified(true);
+            return true;
+          }
+          
+          console.error('Token não é válido para recuperação de senha');
+          setError('Link de redefinição inválido. Solicite um novo link.');
+          return false;
+        }
+        
+        // Tentar inicializar a sessão com o token JWT
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: token,
-          refresh_token: refresh_token
+          refresh_token: refresh_token || ''
         });
         
         if (sessionError) {
-          console.error('Erro ao inicializar sessão de recuperação:', sessionError);
+          console.error('Erro ao inicializar sessão:', sessionError);
+          
+          // Verificar se o usuário já está autenticado
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          if (!userError && userData?.user) {
+            console.log('Usuário já está autenticado:', userData.user);
+            setAccessToken(token);
+            setTokenVerified(true);
+            return true;
+          }
+          
           setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
           return false;
         }
@@ -110,8 +145,8 @@ const ResetPasswordPage: React.FC = () => {
         setAccessToken(token);
         setTokenVerified(true);
         return true;
-      } catch (sessionError) {
-        console.error('Exceção ao inicializar sessão:', sessionError);
+      } catch (error) {
+        console.error('Exceção ao processar token de recuperação:', error);
         setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
         return false;
       }
