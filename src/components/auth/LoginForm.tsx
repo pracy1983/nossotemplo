@@ -30,24 +30,10 @@ const LoginForm: React.FC = () => {
     setError('');
 
     try {
-      // Primeiro, verificar se o email existe no sistema
-      console.log('[ResetPassword] Verificando se o email existe no sistema...');
-      const { data: userData, error: userError } = await supabase
-        .from('students')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (userError || !userData) {
-        console.error('[ResetPassword] Email não encontrado no sistema:', email);
-        // Não revelar que o email não existe por questões de segurança
-        toast.success('Se o email estiver cadastrado, você receberá um link para redefinir sua senha.');
-        return;
-      }
-
-      console.log('[ResetPassword] Email encontrado, enviando link de redefinição...');
+      console.log('[ResetPassword] Enviando link de redefinição via Supabase Auth...');
       
-      // Enviar o email de redefinição de senha
+      // Enviar o email de redefinição de senha diretamente pelo Supabase Auth
+      // sem verificar a tabela students
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl
       });
