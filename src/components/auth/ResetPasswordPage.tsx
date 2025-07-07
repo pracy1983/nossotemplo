@@ -19,40 +19,82 @@ const ResetPasswordPage: React.FC = () => {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        // Extrair parâmetros da URL (tanto da query string quanto do hash)
-        const searchParams = new URLSearchParams(location.search);
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-
         console.log('Verificando token na URL...');
-        console.log('Hash da URL:', window.location.hash);
-        console.log('Query string:', location.search);
-
-        // Tentar obter o token primeiro do hash (formato padrão do Supabase) e depois da query string
-        const token = hashParams.get('access_token') || searchParams.get('access_token');
-        const type = hashParams.get('type') || searchParams.get('type');
-        const refresh_token = hashParams.get('refresh_token') || searchParams.get('refresh_token') || '';
-
-        console.log('Token encontrado:', token ? 'Sim' : 'Não');
-        console.log('Tipo do token:', type);
-
-        if (!token) {
+        console.log('Hash da URL completo:', window.location.hash);
+        console.log('Query string completa:', location.search);
+        
+        // Garantir que estamos processando o hash corretamente
+        // O formato padrão do Supabase é #access_token=TOKEN&type=recovery
+        let hashString = window.location.hash;
+        
+        // Se o hash estiver vazio, não há token para processar
+        if (!hashString || hashString.length <= 1) {
+          console.log('Hash vazio ou inválido, verificando query params');
+          
+          // Verificar se o token está nos query params (formato alternativo)
+          const searchParams = new URLSearchParams(location.search);
+          const queryToken = searchParams.get('access_token');
+          const queryType = searchParams.get('type');
+          
+          if (queryToken && queryType === 'recovery') {
+            console.log('Token encontrado nos query params');
+            const refresh_token = searchParams.get('refresh_token') || '';
+            
+            // Inicializar sessão com o token dos query params
+            await processToken(queryToken, queryType, refresh_token);
+            return;
+          }
+          
+          // Não encontramos o token em nenhum lugar
           console.error('Token de acesso não encontrado na URL');
-          toast.error('Link de redefinição inválido. Solicite um novo link.');
-          navigate('/login');
-          return;
+          setError('Link de redefinição inválido. Solicite um novo link.');
+          return; // Não redirecionar, apenas mostrar o erro
         }
-
+        
+        // Processar o hash (formato padrão do Supabase)
+        // Remover o # inicial
+        hashString = hashString.substring(1);
+        console.log('Hash processado:', hashString);
+        
+        const hashParams = new URLSearchParams(hashString);
+        
+        // Extrair os parâmetros do hash
+        const token = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        const refresh_token = hashParams.get('refresh_token') || '';
+        
+        console.log('Token encontrado no hash:', token ? 'Sim' : 'Não');
+        console.log('Tipo do token:', type);
+        
+        if (!token) {
+          console.error('Token de acesso não encontrado no hash');
+          setError('Link de redefinição inválido. Solicite um novo link.');
+          return; // Não redirecionar, apenas mostrar o erro
+        }
+        
         if (type !== 'recovery') {
           console.error('Tipo de token incorreto:', type);
-          toast.error('Link de redefinição inválido. Solicite um novo link.');
-          navigate('/login');
-          return;
+          setError('Link de redefinição inválido. Solicite um novo link.');
+          return; // Não redirecionar, apenas mostrar o erro
         }
-
-        console.log('Token de recuperação válido encontrado, inicializando sessão...');
         
+        // Processar o token encontrado
+        await processToken(token, type, refresh_token);
+        
+      } catch (error) {
+        console.error('Erro ao verificar token de recuperação de senha:', error);
+        setError('Erro ao verificar token de recuperação. Por favor, solicite um novo link.');
+        // Não redirecionar em caso de erro, apenas mostrar a mensagem
+      }
+    };
+    
+    // Função auxiliar para processar o token e inicializar a sessão
+    const processToken = async (token: string, type: string, refresh_token: string) => {
+      console.log('Processando token de recuperação...');
+      
+      try {
         // IMPORTANTE: Inicializar a sessão com o token de recuperação
-        // Isso resolve o erro "Auth session missing!"
+        console.log('Inicializando sessão com o token...');
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: token,
           refresh_token: refresh_token
@@ -60,18 +102,18 @@ const ResetPasswordPage: React.FC = () => {
         
         if (sessionError) {
           console.error('Erro ao inicializar sessão de recuperação:', sessionError);
-          toast.error('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
-          navigate('/login');
-          return;
+          setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
+          return false;
         }
         
         console.log('Sessão inicializada com sucesso!');
         setAccessToken(token);
         setTokenVerified(true);
-      } catch (error) {
-        console.error('Erro ao verificar token de recuperação de senha:', error);
-        toast.error('Erro ao verificar token de recuperação. Por favor, solicite um novo link.');
-        navigate('/login');
+        return true;
+      } catch (sessionError) {
+        console.error('Exceção ao inicializar sessão:', sessionError);
+        setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
+        return false;
       }
     };
 
