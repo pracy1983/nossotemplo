@@ -56,6 +56,7 @@ export const sendEmail = async (to: string, subject: string, html: string): Prom
 
 // Função específica para enviar email de redefinição de senha
 export const sendPasswordResetEmail = async (to: string, resetLink: string, name: string): Promise<boolean> => {
+  console.log('Reset Link recebido em emailService:', resetLink);
   const subject = 'Redefinição de Senha - Nosso Templo';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

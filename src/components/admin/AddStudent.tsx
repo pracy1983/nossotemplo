@@ -465,6 +465,7 @@ const AddStudent: React.FC<AddStudentProps> = ({ onNavigateToList }) => {
         // estamos gerando um token simples aqui
         const resetToken = Math.random().toString(36).substring(2, 15);
         const resetLink = `${window.location.origin}/redefinir-senha/${resetToken}`;
+        console.log('Reset Link gerado:', resetLink);
         
         // Importar a função de envio de email de redefinição de senha
         const { sendPasswordResetEmail } = await import('../../services/emailServiceFrontend');
