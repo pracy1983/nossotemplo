@@ -151,6 +151,22 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 )}
               </div>
 
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Nome Mágicko (Artístico, apelido, etc)
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.magickoName || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, magickoName: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.magickoName || 'Não informado'}</p>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Email
@@ -217,14 +233,32 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   CPF
                 </label>
-                <p className="text-white">{student.cpf || 'Não informado'}</p>
+                {isEditing && !student.cpf ? (
+                  <input
+                    type="text"
+                    value={formData.cpf || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.cpf || 'Não informado'}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   RG
                 </label>
-                <p className="text-white">{student.rg || 'Não informado'}</p>
+                {isEditing && !student.rg ? (
+                  <input
+                    type="text"
+                    value={formData.rg || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, rg: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.rg || 'Não informado'}</p>
+                )}
               </div>
             </div>
           </div>

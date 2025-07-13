@@ -2,6 +2,7 @@ export interface Student {
   id: string;
   photo?: string;
   fullName: string;
+  magickoName?: string; // Nome Mágicko (Artístico, apelido)
   birthDate: string;
   cpf: string;
   rg: string;
