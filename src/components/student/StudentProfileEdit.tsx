@@ -203,7 +203,16 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Data de Nascimento
                 </label>
-                <p className="text-white">{formatDate(student.birthDate)}</p>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={formData.birthDate || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{formatDate(student.birthDate)}</p>
+                )}
               </div>
 
               <div>
@@ -394,6 +403,118 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
             </div>
           </div>
 
+          {/* Social Media and Additional Information */}
+          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <h3 className="text-lg font-semibold text-white mb-4">Informações Adicionais</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Instagram Pessoal
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.instagramPersonal || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, instagramPersonal: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.instagramPersonal || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Instagram Mágicko
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.instagramMagicko || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, instagramMagicko: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.instagramMagicko || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Como conheceu o templo
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={formData.howFoundTemple || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, howFoundTemple: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                  />
+                ) : (
+                  <p className="text-white">{student.howFoundTemple || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Termos de uso de imagem
+                </label>
+                {isEditing && !student.acceptsImageTerms && !student.imageTermsAcceptedAt ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-gray-800 rounded-lg p-2 w-64">
+                      <button
+                        onClick={() => {
+                          if (confirm("Você NÃO ACEITA ceder direitos de imagem?")) {
+                            setFormData(prev => ({
+                              ...prev,
+                              acceptsImageTerms: false,
+                              imageTermsAcceptedAt: new Date().toISOString()
+                            }));
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg transition-colors ${!formData.acceptsImageTerms ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Não
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Você ACEITA ceder direitos de imagem?")) {
+                            setFormData(prev => ({
+                              ...prev,
+                              acceptsImageTerms: true,
+                              imageTermsAcceptedAt: new Date().toISOString()
+                            }));
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg transition-colors ${formData.acceptsImageTerms ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400'}`}
+                      >
+                        Sim
+                      </button>
+                    </div>
+                    <div>
+                      <a 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          alert("Termos de uso de imagem: Ao aceitar, você concorda em ceder seus direitos de imagem para uso exclusivo do Templo em materiais promocionais e registros internos.");
+                        }}
+                        className="text-blue-400 hover:underline"
+                      >
+                        Clique aqui para ler os termos completos
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-white">
+                    {student.acceptsImageTerms || formData.acceptsImageTerms ? 
+                      <span className="text-green-400 font-medium">Aceitou os termos de uso de imagem {student.imageTermsAcceptedAt ? ' em ' + formatDate(student.imageTermsAcceptedAt) : ''}</span> : 
+                      <span className="text-red-400 font-medium">Não aceitou os termos de uso de imagem {student.imageTermsAcceptedAt ? ' em ' + formatDate(student.imageTermsAcceptedAt) : ''}</span>}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Spiritual Development Dates */}
           <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
             <h3 className="text-lg font-semibold text-white mb-4">Histórico</h3>
@@ -475,87 +596,6 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
                   />
                 ) : (
                   <p className="text-white">{student.masterMagusInitiationDate ? formatDate(student.masterMagusInitiationDate) : 'Não informado'}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Social Media and Additional Information */}
-          <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-            <h3 className="text-lg font-semibold text-white mb-4">Informações Adicionais</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Instagram Pessoal
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.instagramPersonal || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, instagramPersonal: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
-                  />
-                ) : (
-                  <p className="text-white">{student.instagramPersonal || 'Não informado'}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Instagram Mágicko
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.instagramMagicko || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, instagramMagicko: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
-                  />
-                ) : (
-                  <p className="text-white">{student.instagramMagicko || 'Não informado'}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Como conheceu o templo
-                </label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.howFoundTemple || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, howFoundTemple: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
-                  />
-                ) : (
-                  <p className="text-white">{student.howFoundTemple || 'Não informado'}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Termos de uso de imagem
-                </label>
-                {isEditing && !student.acceptsImageTerms ? (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.acceptsImageTerms || false}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        acceptsImageTerms: e.target.checked,
-                        imageTermsAcceptedAt: e.target.checked ? new Date().toISOString() : undefined
-                      }))}
-                      className="w-5 h-5 bg-gray-800 border border-gray-700 rounded text-red-600 focus:ring-red-600"
-                    />
-                    <span className="text-white">Aceito os termos de uso de imagem</span>
-                  </div>
-                ) : (
-                  <p className="text-white">
-                    {student.acceptsImageTerms || formData.acceptsImageTerms ? 
-                      <span className="text-green-400 font-medium">Aceitou os termos de uso de imagem {student.imageTermsAcceptedAt ? ' em ' + formatDate(student.imageTermsAcceptedAt) : ''}</span> : 
-                      'Não aceito'}
-                  </p>
                 )}
               </div>
             </div>
