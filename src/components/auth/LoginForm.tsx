@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-toastify';
@@ -14,6 +15,7 @@ const LoginForm: React.FC = () => {
   const [showSetupInfo, setShowSetupInfo] = useState(false);
   
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -82,6 +84,9 @@ const LoginForm: React.FC = () => {
       if (!success) {
         setError('Email ou senha incorretos');
         setShowSetupInfo(true);
+      } else {
+        // Redirecionar para a página inicial após login bem-sucedido
+        navigate('/');
       }
     } catch (error: any) {
       console.error('Login error:', error);
