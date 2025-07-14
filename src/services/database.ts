@@ -74,60 +74,65 @@ const simulateEmailSend = (to: string, subject: string, html: string): void => {
 };
 
 // Helper functions to convert between database and app types
-const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => ({
-  id: dbStudent.id,
-  photo: dbStudent.photo,
-  fullName: dbStudent.full_name,
-  birthDate: dbStudent.birth_date || '',
-  cpf: dbStudent.cpf || '',
-  rg: dbStudent.rg || '',
-  email: dbStudent.email,
-  phone: dbStudent.phone || '',
-  religion: dbStudent.religion || '',
-  unit: dbStudent.unit,
-  developmentStartDate: dbStudent.development_start_date,
-  internshipStartDate: dbStudent.internship_start_date,
-  magistInitiationDate: dbStudent.magist_initiation_date,
-  notEntryDate: dbStudent.not_entry_date,
-  masterMagusInitiationDate: dbStudent.master_magus_initiation_date,
-  isFounder: dbStudent.is_founder,
-  isActive: dbStudent.is_active,
-  inactiveSince: dbStudent.inactive_since,
-  lastActivity: dbStudent.last_activity,
-  isAdmin: dbStudent.is_admin,
-  isGuest: dbStudent.is_guest,
-  role: dbStudent.is_admin ? 'admin' : 'student', // Default role mapping
-  attendance: [],
-  // Address fields
-  street: dbStudent.street,
-  number: dbStudent.number,
-  complement: dbStudent.complement,
-  neighborhood: dbStudent.neighborhood,
-  zipCode: dbStudent.zip_code,
-  city: dbStudent.city,
-  state: dbStudent.state,
-  // Group/Class field
-  turma: dbStudent.turma,
-  turmaId: undefined, // Will be populated from turma_alunos table
-  // Invite and approval fields
-  isPendingApproval: dbStudent.is_pending_approval,
-  inviteStatus: dbStudent.invite_status as 'pending' | 'accepted' | 'expired' | undefined,
-  inviteToken: dbStudent.invite_token,
-  invitedAt: dbStudent.invited_at,
-  invitedBy: dbStudent.invited_by
-});
+const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => {
+  // Garantir que os campos opcionais tenham valores padrão adequados
+  return {
+    id: dbStudent.id,
+    photo: dbStudent.photo || undefined,
+    fullName: dbStudent.full_name,
+    birthDate: dbStudent.birth_date || '',
+    cpf: dbStudent.cpf || '',
+    rg: dbStudent.rg || '',
+    email: dbStudent.email,
+    phone: dbStudent.phone || '',
+    religion: dbStudent.religion || '',
+    unit: (dbStudent.unit as 'SP' | 'BH' | 'CP') || 'SP',
+    developmentStartDate: dbStudent.development_start_date || undefined,
+    internshipStartDate: dbStudent.internship_start_date || undefined,
+    magistInitiationDate: dbStudent.magist_initiation_date || undefined,
+    notEntryDate: dbStudent.not_entry_date || undefined,
+    masterMagusInitiationDate: dbStudent.master_magus_initiation_date || undefined,
+    isFounder: dbStudent.is_founder,
+    isActive: dbStudent.is_active,
+    inactiveSince: dbStudent.inactive_since || undefined,
+    lastActivity: dbStudent.last_activity || undefined,
+    isAdmin: dbStudent.is_admin,
+    isGuest: dbStudent.is_guest,
+    role: dbStudent.is_admin ? 'admin' : 'student', // Default role mapping
+    street: dbStudent.street || '',
+    number: dbStudent.number || '',
+    complement: dbStudent.complement || '',
+    neighborhood: dbStudent.neighborhood || '',
+    zipCode: dbStudent.zip_code || '',
+    city: dbStudent.city || '',
+    state: dbStudent.state || '',
+    turma: dbStudent.turma || '',
+    isPendingApproval: dbStudent.is_pending_approval,
+    inviteStatus: dbStudent.invite_status || 'pending',
+    inviteToken: dbStudent.invite_token || '',
+    invitedAt: dbStudent.invited_at || '',
+    invitedBy: dbStudent.invited_by || '',
+    attendance: [],
+  };
+};
 
 const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent> => {
   const dbData: Partial<DatabaseStudent> = {};
-  if (student.photo !== undefined) dbData.photo = student.photo;
-  if (student.fullName !== undefined) dbData.full_name = student.fullName;
-  if (student.birthDate !== undefined) dbData.birth_date = student.birthDate || '1900-01-01'; // Use placeholder date instead of null
-  if (student.cpf !== undefined) dbData.cpf = student.cpf || null;
-  if (student.rg !== undefined) dbData.rg = student.rg || null;
-  if (student.email !== undefined) dbData.email = student.email;
-  if (student.phone !== undefined) dbData.phone = student.phone || null;
-  if (student.religion !== undefined) dbData.religion = student.religion || null;
-  if (student.unit !== undefined) dbData.unit = student.unit;
+
+  if (student.id !== undefined) dbData.id = student.id;
+  if (student.photo !== undefined) dbData.photo = student.photo || null;
+  if (student.fullName !== undefined) dbData.full_name = student.fullName === '' ? null : student.fullName;
+  if (student.birthDate !== undefined) dbData.birth_date = student.birthDate === '' ? null : student.birthDate;
+  if (student.cpf !== undefined) dbData.cpf = student.cpf === '' ? null : student.cpf;
+  if (student.rg !== undefined) dbData.rg = student.rg === '' ? null : student.rg;
+  if (student.email !== undefined) dbData.email = student.email === '' ? null : student.email;
+  if (student.phone !== undefined) dbData.phone = student.phone === '' ? null : student.phone;
+  if (student.religion !== undefined) dbData.religion = student.religion === '' ? null : student.religion;
+  if (student.unit !== undefined) {
+    // Garantir que unit seja um dos valores válidos
+    const validUnits = ['SP', 'BH', 'CP'] as const;
+    dbData.unit = validUnits.includes(student.unit as any) ? student.unit : 'SP';
+  }
   if (student.developmentStartDate !== undefined) dbData.development_start_date = student.developmentStartDate === '' ? null : student.developmentStartDate;
   if (student.internshipStartDate !== undefined) dbData.internship_start_date = student.internshipStartDate === '' ? null : student.internshipStartDate;
   if (student.magistInitiationDate !== undefined) dbData.magist_initiation_date = student.magistInitiationDate === '' ? null : student.magistInitiationDate;
@@ -140,47 +145,52 @@ const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent>
   if (student.isAdmin !== undefined) dbData.is_admin = student.isAdmin;
   if (student.isGuest !== undefined) dbData.is_guest = student.isGuest;
   // Address fields
-  if (student.street !== undefined) dbData.street = student.street || null;
-  if (student.number !== undefined) dbData.number = student.number || null;
-  if (student.complement !== undefined) dbData.complement = student.complement || null;
-  if (student.neighborhood !== undefined) dbData.neighborhood = student.neighborhood || null;
-  if (student.zipCode !== undefined) dbData.zip_code = student.zipCode || null;
-  if (student.city !== undefined) dbData.city = student.city || null;
-  if (student.state !== undefined) dbData.state = student.state || null;
+  if (student.street !== undefined) dbData.street = student.street === '' ? null : student.street;
+  if (student.number !== undefined) dbData.number = student.number === '' ? null : student.number;
+  if (student.complement !== undefined) dbData.complement = student.complement === '' ? null : student.complement;
+  if (student.neighborhood !== undefined) dbData.neighborhood = student.neighborhood === '' ? null : student.neighborhood;
+  if (student.zipCode !== undefined) dbData.zip_code = student.zipCode === '' ? null : student.zipCode;
+  if (student.city !== undefined) dbData.city = student.city === '' ? null : student.city;
+  if (student.state !== undefined) dbData.state = student.state === '' ? null : student.state;
   // Group/Class field
-  if (student.turma !== undefined) dbData.turma = student.turma || null;
+  if (student.turma !== undefined) dbData.turma = student.turma === '' ? null : student.turma;
   // Invite and approval fields
   if (student.isPendingApproval !== undefined) dbData.is_pending_approval = student.isPendingApproval;
-  if (student.inviteStatus !== undefined) dbData.invite_status = student.inviteStatus || null;
-  if (student.inviteToken !== undefined) dbData.invite_token = student.inviteToken || null;
-  if (student.invitedAt !== undefined) dbData.invited_at = student.invitedAt || null;
-  if (student.invitedBy !== undefined) dbData.invited_by = student.invitedBy || null;
+  if (student.inviteStatus !== undefined) dbData.invite_status = student.inviteStatus;
+  if (student.inviteToken !== undefined) dbData.invite_token = student.inviteToken === '' ? null : student.inviteToken;
+  if (student.invitedAt !== undefined) dbData.invited_at = student.invitedAt === '' ? null : student.invitedAt;
+  if (student.invitedBy !== undefined) dbData.invited_by = student.invitedBy === '' ? null : student.invitedBy;
   return dbData;
 };
 
 const dbEventToEvent = (dbEvent: DatabaseEvent): Event => {
-  // Determine event type and color from title if not explicitly set
+  // Definir valores padrão para temple e color caso não sejam válidos
+  const validUnits = ['SP', 'BH', 'CP'] as const;
+  const unitValue = dbEvent.unit || 'SP';
+  const unit = validUnits.includes(unitValue as any) ? unitValue as 'SP' | 'BH' | 'CP' : 'SP';
+
+  // Definir valores padrão para os campos de evento
   let eventType: keyof typeof EVENT_TYPES = 'outro';
-  let eventColor = EVENT_TYPES.outro.color;
-  
+  let eventColor = EVENT_TYPES.outro.color as '#3B82F6' | '#8B5CF6' | '#10B981' | '#F59E0B' | '#DC2626' | '#6B7280' | '#EC4899';
+
   // Try to match event title with event types
   const title = dbEvent.title.toLowerCase();
   for (const [key, type] of Object.entries(EVENT_TYPES)) {
     if (title.includes(type.label.toLowerCase()) || title === type.label.toLowerCase()) {
       eventType = key as keyof typeof EVENT_TYPES;
-      eventColor = type.color;
+      eventColor = type.color as '#3B82F6' | '#8B5CF6' | '#10B981' | '#F59E0B' | '#DC2626' | '#6B7280' | '#EC4899';
       break;
     }
   }
-  
+
   return {
     id: dbEvent.id,
     title: dbEvent.title,
+    description: dbEvent.description || '',
     date: dbEvent.date,
     time: dbEvent.time,
-    description: dbEvent.description || '',
-    location: dbEvent.location,
-    unit: dbEvent.unit,
+    location: dbEvent.location || '',
+    unit: unit,
     attendees: [],
     type: eventType,
     color: eventColor,
@@ -432,6 +442,61 @@ export const createStudent = async (student: Student): Promise<Student> => {
   }
 };
 
+export const getStudentById = async (id: string): Promise<Student> => {
+  try {
+    console.log(`getStudentById - Buscando estudante com ID ${id} diretamente do banco...`);
+    
+    // Adicionar timestamp para evitar cache
+    const noCache = new Date().getTime();
+    
+    // Buscar o estudante
+    const { data: studentData, error: studentError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (studentError) {
+      console.error(`getStudentById - Erro ao buscar estudante ${id}:`, studentError);
+      throw new Error(`Erro ao buscar estudante: ${studentError.message}`);
+    }
+    
+    if (!studentData) {
+      console.error(`getStudentById - Estudante ${id} não encontrado`);
+      throw new Error(`Estudante não encontrado`);
+    }
+    
+    console.log(`getStudentById - Estudante ${id} encontrado:`, JSON.stringify(studentData, null, 2));
+    
+    // Buscar registros de presença para o estudante
+    const { data: attendanceData, error: attendanceError } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('student_id', id);
+    
+    if (attendanceError) {
+      console.error(`getStudentById - Erro ao buscar presenças do estudante ${id}:`, attendanceError);
+      // Continuar sem os dados de presença
+    }
+    
+    // Converter para o formato da aplicação
+    const student = dbStudentToStudent(studentData);
+    
+    // Adicionar registros de presença
+    if (attendanceData && attendanceData.length > 0) {
+      student.attendance = attendanceData.map(dbAttendanceToAttendance);
+    } else {
+      student.attendance = [];
+    }
+    
+    console.log(`getStudentById - Dados completos do estudante ${id} (timestamp: ${noCache}):`, JSON.stringify(student, null, 2));
+    return student;
+  } catch (error) {
+    console.error(`getStudentById - Erro:`, error);
+    throw error;
+  }
+};
+
 export const getStudents = async (): Promise<Student[]> => {
   try {
     console.log('Starting getStudents...');
@@ -497,30 +562,120 @@ export const getStudents = async (): Promise<Student[]> => {
 
 export const updateStudent = async (id: string, updates: Partial<Student>): Promise<Student> => {
   try {
+    console.log('updateStudent - ID:', id);
+    console.log('updateStudent - Updates recebidos:', updates);
     const dbUpdates = studentToDbStudent(updates);
-    const { data, error } = await supabase
+    console.log('updateStudent - dbUpdates após conversão:', dbUpdates);
+    
+    // Atualizar o registro sem tentar obter o resultado na mesma operação
+    console.log('updateStudent - Enviando update para o Supabase...');
+    console.log('updateStudent - URL do Supabase:', import.meta.env.VITE_SUPABASE_URL);
+    console.log('updateStudent - Tabela:', 'students');
+    console.log('updateStudent - ID do aluno:', id);
+    
+    // Verificar se o cliente Supabase está inicializado corretamente
+    const supabaseClient = supabase;
+    console.log('updateStudent - Cliente Supabase inicializado:', !!supabaseClient);
+    
+    // Executar o update e capturar o resultado completo
+    const updateResult = await supabaseClient
       .from('students')
       .update(dbUpdates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating student:', error);
+      .eq('id', id);
+    
+    // Log detalhado do resultado com JSON.stringify para ver o conteúdo completo
+    console.log('updateStudent - Resultado completo do update:', JSON.stringify(updateResult, null, 2));
+    
+    const { data: updateData, error: updateError } = updateResult;
+    
+    if (updateData) {
+      console.log('updateStudent - Dados retornados após update:', JSON.stringify(updateData, null, 2));
+    }
+    
+    if (updateError) {
+      console.error('Error updating student:', updateError);
+      console.error('updateStudent - Código de erro:', updateError.code);
+      console.error('updateStudent - Mensagem de erro:', updateError.message);
+      console.error('updateStudent - Detalhes:', updateError.details);
       
       // Handle specific database errors
-      if (error.code === '23505') {
-        if (error.message.includes('students_email_key')) {
+      if (updateError.code === '23505') {
+        if (updateError.message.includes('students_email_key')) {
           throw new Error('Já existe um aluno com este email.');
         } else {
           throw new Error('Violação de restrição única no banco de dados.');
         }
+      } else if (updateError.code === '406') {
+        throw new Error('Não foi possível encontrar o aluno para atualização.');
+      } else if (updateError.code === '42501') {
+        throw new Error(`Erro de permissão: Você não tem permissão para atualizar este aluno. Verifique as políticas RLS.`);
       } else {
-        throw new Error(`Erro ao atualizar aluno: ${error.message}`);
+        throw new Error(`Erro ao atualizar aluno: ${updateError.message}`);
       }
     }
-
-    return dbStudentToStudent(data);
+    
+    // Fazer uma consulta direta para verificar se os dados foram atualizados
+    console.log('updateStudent - Consultando diretamente a tabela students após update...');
+    try {
+      const { data: directQueryData, error: directQueryError } = await supabaseClient
+        .from('students')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (directQueryError) {
+        console.error('updateStudent - Erro na consulta direta:', JSON.stringify(directQueryError, null, 2));
+      } else {
+        console.log('updateStudent - Dados atuais no banco após update:', JSON.stringify(directQueryData, null, 2));
+      }
+    } catch (queryError) {
+      console.error('updateStudent - Erro ao consultar dados atualizados:', queryError);
+    }
+    
+    // Buscar o registro atualizado diretamente do banco, ignorando qualquer cache
+    console.log('updateStudent - Buscando dados atualizados diretamente do banco...');
+    // Adicionando um timestamp para evitar cache
+    const noCache = new Date().getTime();
+    const { data: updatedData, error: fetchError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('id', id)
+      .order('created_at', { ascending: false })
+      .limit(1); // Forçar busca do registro mais recente
+      
+    console.log(`updateStudent - Consulta sem cache realizada (timestamp: ${noCache})`);
+    console.log('updateStudent - Dados retornados após consulta:', JSON.stringify(updatedData, null, 2));
+    
+    if (fetchError) {
+      console.error('Error fetching updated student:', fetchError);
+      throw new Error(`Erro ao buscar aluno atualizado: ${fetchError.message}`);
+    }
+    
+    if (!updatedData || updatedData.length === 0) {
+      throw new Error('Não foi possível encontrar o aluno após a atualização');
+    }
+    
+    // Buscar registros de presença para o aluno
+    let attendanceData = [];
+    try {
+      const { data: attendanceResult } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('student_id', id);
+      
+      if (attendanceResult) {
+        attendanceData = attendanceResult;
+      }
+    } catch (attendanceErr) {
+      console.error('Error fetching attendance:', attendanceErr);
+      // Continuar sem os dados de presença
+    }
+    
+    // Converter para o formato da aplicação e adicionar os registros de presença
+    const student = dbStudentToStudent(updatedData[0]);
+    student.attendance = attendanceData.length > 0 ? attendanceData.map(dbAttendanceToAttendance) : [];
+    
+    return student;
   } catch (error) {
     console.error('Error in updateStudent:', error);
     throw error;

@@ -27,8 +27,18 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
     }
 
     try {
-      await updateStudent(student.id, { ...formData, photo });
+      console.log('StudentProfileEdit - handleSave - Enviando atualização para:', student.id);
+      console.log('StudentProfileEdit - handleSave - Dados a serem atualizados:', { ...formData, photo });
+      
+      // Obter o estudante atualizado retornado pela função updateStudent
+      const updatedStudent = await updateStudent(student.id, { ...formData, photo });
+      console.log('StudentProfileEdit - handleSave - Estudante atualizado recebido:', updatedStudent);
+      
+      // Atualizar o estado local com os dados atualizados
+      setFormData(updatedStudent);
+      setPhoto(updatedStudent.photo || '');
       setIsEditing(false);
+      
       alert('Perfil atualizado com sucesso!');
     } catch (error) {
       console.error('Error updating profile:', error);

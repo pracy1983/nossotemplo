@@ -3,12 +3,6 @@
  * Este arquivo centraliza toda a lógica de inicialização e gerenciamento do cliente Supabase
  */
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { MockSupabaseClient } from './supabaseMock';
-import { createMockClient } from './supabaseMock';
-
-// Configuração de retry
-const MAX_RETRY_ATTEMPTS = 3;
-const RETRY_DELAY_MS = 1000;
 
 // Interface para o cliente Supabase com tipos
 export interface DatabaseTypes {
@@ -86,11 +80,9 @@ export interface DatabaseTypes {
  */
 class SupabaseManager {
   private static instance: SupabaseManager;
-  private _client: SupabaseClient | MockSupabaseClient | null = null;
+  private _client: SupabaseClient | null = null;
+  private _initPromise: Promise<SupabaseClient> | null = null;
   private _isInitializing: boolean = false;
-  private _initPromise: Promise<SupabaseClient | MockSupabaseClient> | null = null;
-  private _retryCount: number = 0;
-  private _isMockClient: boolean = false;
 
   private constructor() {
     // Construtor privado para garantir o padrão Singleton
@@ -107,16 +99,16 @@ class SupabaseManager {
   }
 
   /**
-   * Verifica se o cliente está usando a implementação mock
+   * Verifica se o cliente está inicializado
    */
-  public get isMockClient(): boolean {
-    return this._isMockClient;
+  public get isInitialized(): boolean {
+    return this._client !== null;
   }
 
   /**
    * Obtém o cliente Supabase, inicializando-o se necessário
    */
-  public async getClient(): Promise<SupabaseClient | MockSupabaseClient> {
+  public async getClient(): Promise<SupabaseClient> {
     if (this._client) {
       return this._client;
     }
@@ -131,83 +123,57 @@ class SupabaseManager {
 
   /**
    * Obtém o cliente Supabase de forma síncrona
-   * Retorna o cliente mock se o cliente real ainda não estiver inicializado
    */
-  public getClientSync(): SupabaseClient | MockSupabaseClient {
+  public getClientSync(): SupabaseClient {
     if (this._client) {
       return this._client;
     }
     
-    // Se o cliente não estiver inicializado, retorna um cliente mock temporário
-    // e inicia a inicialização em background se ainda não estiver em andamento
-    if (!this._isInitializing && !this._initPromise) {
-      this._initPromise = this.initializeClient();
-    }
-    
-    // Verificar se as variáveis de ambiente estão definidas
+    // Inicializar o cliente Supabase imediatamente
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    // Se as variáveis de ambiente estão definidas, tentar criar o cliente real
-    if (supabaseUrl && supabaseAnonKey) {
-      try {
-        const client = createClient<DatabaseTypes>(supabaseUrl, supabaseAnonKey, {
-          auth: { 
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true // Importante para detectar tokens na URL
-          }
-        });
-        
-        this._client = client;
-        this._isMockClient = false;
-        console.log('Cliente Supabase inicializado sincronamente');
-        return client;
-      } catch (error) {
-        console.error('Erro ao inicializar Supabase sincronamente:', error);
-      }
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('ERRO CRÍTICO: Variáveis de ambiente do Supabase não definidas!');
+      console.error('VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY não encontradas');
+      throw new Error('Configuração do Supabase incompleta. Verifique as variáveis de ambiente.');
     }
     
-    // Se não conseguir criar o cliente real, retorna um cliente mock temporário
-    console.warn('Usando cliente mock temporário enquanto aguarda inicialização do cliente real');
-    this._isMockClient = true;
-    return createMockClient();
+    try {
+      // Criar cliente real imediatamente
+      this._client = createClient(supabaseUrl, supabaseAnonKey);
+      console.log('Cliente Supabase inicializado com sucesso');
+      return this._client;
+    } catch (error) {
+      console.error('Erro fatal ao inicializar cliente Supabase:', error);
+      throw new Error('Falha ao inicializar cliente Supabase. Verifique a conexão e as credenciais.');
+    }
   }
 
   /**
    * Inicializa o cliente Supabase com retry e timeout
    */
-  private async initializeClient(): Promise<SupabaseClient | MockSupabaseClient> {
-    if (this._isInitializing) {
-      throw new Error('Cliente já está sendo inicializado');
+  private async initializeClient(): Promise<SupabaseClient> {
+    if (this._client) {
+      return this._client;
     }
 
     this._isInitializing = true;
-    
+
     try {
-      // Obter as variáveis de ambiente
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
       
-      console.log('Supabase Environment Check:');
-      console.log('URL:', supabaseUrl ? 'Present' : 'Missing');
-      console.log('Anon Key:', supabaseAnonKey ? 'Present' : 'Missing');
-      
-      // Verificar se as variáveis estão definidas
       if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error('Variáveis de ambiente do Supabase não encontradas');
+        throw new Error('Variáveis de ambiente do Supabase não definidas');
       }
       
-      // Criar o cliente com configuração completa para autenticação
-      const client = createClient<DatabaseTypes>(supabaseUrl, supabaseAnonKey, {
-        auth: { 
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true // Importante para detectar tokens na URL
-        }
-      });
+      console.log('Inicializando cliente Supabase...');
       
-      // Testar a conexão para garantir que o cliente foi inicializado corretamente
+      // Criar o cliente Supabase
+      const client = createClient(supabaseUrl, supabaseAnonKey);
+      
+      // Testar a conexão
       const { error } = await client
         .from('students')
         .select('count', { count: 'exact', head: true });
@@ -216,38 +182,13 @@ class SupabaseManager {
         throw new Error(`Erro ao testar conexão: ${error.message}`);
       }
       
-      // Cliente inicializado com sucesso
-      this._client = client;
-      this._isMockClient = false;
       console.log('Cliente Supabase inicializado com sucesso');
       
+      this._client = client;
       return client;
     } catch (error) {
-      console.error('Erro ao inicializar Supabase:', error);
-      
-      // Implementar lógica de retry com backoff exponencial
-      if (this._retryCount < MAX_RETRY_ATTEMPTS) {
-        this._retryCount++;
-        const delayMs = RETRY_DELAY_MS * Math.pow(2, this._retryCount - 1);
-        
-        console.log(`Tentando novamente em ${delayMs}ms (tentativa ${this._retryCount}/${MAX_RETRY_ATTEMPTS})`);
-        
-        // Resetar o estado de inicialização para permitir nova tentativa
-        this._isInitializing = false;
-        this._initPromise = null;
-        
-        // Esperar antes de tentar novamente
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        
-        // Tentar novamente
-        return this.getClient();
-      }
-      
-      // Se todas as tentativas falharem, usar o cliente mock
-      console.warn('Todas as tentativas de inicialização falharam. Usando cliente mock.');
-      this._isMockClient = true;
-      this._client = createMockClient();
-      return this._client;
+      console.error('ERRO FATAL ao inicializar Supabase:', error);
+      throw new Error(`Falha ao conectar com Supabase: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this._isInitializing = false;
     }
@@ -260,16 +201,13 @@ class SupabaseManager {
     this._client = null;
     this._initPromise = null;
     this._isInitializing = false;
-    this._retryCount = 0;
-    this._isMockClient = false;
   }
 }
 
 // Exportar uma instância do cliente para uso em toda a aplicação
 export const supabaseManager = SupabaseManager.getInstance();
 
-// Exportar um getter para o cliente que pode ser usado de forma síncrona
-// mas que tentará inicializar o cliente real em background
+// Exportar um getter para o cliente real do Supabase
 export const supabase = supabaseManager.getClientSync();
 
 // Função para verificar a conexão com o Supabase

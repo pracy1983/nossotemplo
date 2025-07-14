@@ -16,19 +16,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored session
-    const storedUser = localStorage.getItem('nosso-templo-user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        console.log('Restored user from localStorage:', parsedUser.email);
-        setUser(parsedUser);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('nosso-templo-user');
-      }
+    // Check for stored email only
+    const storedEmail = localStorage.getItem('nosso-templo-email');
+    const storedPassword = localStorage.getItem('nosso-templo-password');
+    
+    if (storedEmail && storedPassword) {
+      // Forçar uma nova autenticação para buscar dados atualizados do banco
+      console.log('Found stored credentials, authenticating to get fresh data...');
+      
+      (async () => {
+        try {
+          await login(storedEmail, storedPassword);
+        } catch (error) {
+          console.error('Error auto-authenticating:', error);
+          localStorage.removeItem('nosso-templo-email');
+          localStorage.removeItem('nosso-templo-password');
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -48,7 +57,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         setUser(authenticatedUser);
-        localStorage.setItem('nosso-templo-user', JSON.stringify(authenticatedUser));
+        // Armazenar apenas email e senha para re-autenticação
+        localStorage.setItem('nosso-templo-email', email);
+        localStorage.setItem('nosso-templo-password', password);
         return true;
       }
       
@@ -64,7 +75,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     console.log('AuthContext: Logging out user');
     setUser(null);
-    localStorage.removeItem('nosso-templo-user');
+    localStorage.removeItem('nosso-templo-email');
+    localStorage.removeItem('nosso-templo-password');
   };
 
   return (
