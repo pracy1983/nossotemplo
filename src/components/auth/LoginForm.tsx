@@ -3,6 +3,7 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ const LoginForm: React.FC = () => {
   const [showSetupInfo, setShowSetupInfo] = useState(false);
   
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleResetPassword = async () => {
     if (!email) {
@@ -79,7 +81,10 @@ const LoginForm: React.FC = () => {
     try {
       const success = await login(email, password);
       
-      if (!success) {
+      if (success) {
+        // Redireciona para o dashboard após login bem-sucedido
+        navigate('/dashboard');
+      } else {
         setError('Email ou senha incorretos');
         setShowSetupInfo(true);
       }

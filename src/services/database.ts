@@ -562,125 +562,50 @@ export const getStudents = async (): Promise<Student[]> => {
 
 export const updateStudent = async (id: string, updates: Partial<Student>): Promise<Student> => {
   try {
-    console.log('updateStudent - ID:', id);
-    console.log('updateStudent - Updates recebidos:', updates);
     const dbUpdates = studentToDbStudent(updates);
-    console.log('updateStudent - dbUpdates após conversão:', dbUpdates);
-    
-    // Atualizar o registro sem tentar obter o resultado na mesma operação
-    console.log('updateStudent - Enviando update para o Supabase...');
-    console.log('updateStudent - URL do Supabase:', import.meta.env.VITE_SUPABASE_URL);
-    console.log('updateStudent - Tabela:', 'students');
-    console.log('updateStudent - ID do aluno:', id);
-    
-    // Verificar se o cliente Supabase está inicializado corretamente
-    const supabaseClient = supabase;
-    console.log('updateStudent - Cliente Supabase inicializado:', !!supabaseClient);
-    
-    // Executar o update e capturar o resultado completo
-    const updateResult = await supabaseClient
+
+    const { error: updateError } = await supabase
       .from('students')
       .update(dbUpdates)
       .eq('id', id);
-    
-    // Log detalhado do resultado com JSON.stringify para ver o conteúdo completo
-    console.log('updateStudent - Resultado completo do update:', JSON.stringify(updateResult, null, 2));
-    
-    const { data: updateData, error: updateError } = updateResult;
-    
-    if (updateData) {
-      console.log('updateStudent - Dados retornados após update:', JSON.stringify(updateData, null, 2));
-    }
-    
+
     if (updateError) {
       console.error('Error updating student:', updateError);
-      console.error('updateStudent - Código de erro:', updateError.code);
-      console.error('updateStudent - Mensagem de erro:', updateError.message);
-      console.error('updateStudent - Detalhes:', updateError.details);
-      
-      // Handle specific database errors
       if (updateError.code === '23505') {
-        if (updateError.message.includes('students_email_key')) {
-          throw new Error('Já existe um aluno com este email.');
-        } else {
-          throw new Error('Violação de restrição única no banco de dados.');
-        }
-      } else if (updateError.code === '406') {
-        throw new Error('Não foi possível encontrar o aluno para atualização.');
+        throw new Error('Já existe um aluno com este email.');
       } else if (updateError.code === '42501') {
-        throw new Error(`Erro de permissão: Você não tem permissão para atualizar este aluno. Verifique as políticas RLS.`);
+        throw new Error('Erro de permissão: Você não tem permissão para atualizar este aluno.');
       } else {
         throw new Error(`Erro ao atualizar aluno: ${updateError.message}`);
       }
     }
-    
-    // Fazer uma consulta direta para verificar se os dados foram atualizados
-    console.log('updateStudent - Consultando diretamente a tabela students após update...');
-    try {
-      const { data: directQueryData, error: directQueryError } = await supabaseClient
-        .from('students')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (directQueryError) {
-        console.error('updateStudent - Erro na consulta direta:', JSON.stringify(directQueryError, null, 2));
-      } else {
-        console.log('updateStudent - Dados atuais no banco após update:', JSON.stringify(directQueryData, null, 2));
-      }
-    } catch (queryError) {
-      console.error('updateStudent - Erro ao consultar dados atualizados:', queryError);
-    }
-    
-    // Buscar o registro atualizado diretamente do banco, ignorando qualquer cache
-    console.log('updateStudent - Buscando dados atualizados diretamente do banco...');
-    // Adicionando um timestamp para evitar cache
-    const noCache = new Date().getTime();
+
+    // Após a atualização, busca o registro completo e atualizado do banco.
+    // O select com `*, attendance(*)` busca o aluno e seus registros de presença de uma vez.
     const { data: updatedData, error: fetchError } = await supabase
       .from('students')
-      .select('*')
+      .select(`
+        *,
+        attendance (*)
+      `)
       .eq('id', id)
-      .order('created_at', { ascending: false })
-      .limit(1); // Forçar busca do registro mais recente
-      
-    console.log(`updateStudent - Consulta sem cache realizada (timestamp: ${noCache})`);
-    console.log('updateStudent - Dados retornados após consulta:', JSON.stringify(updatedData, null, 2));
-    
+      .single();
+
     if (fetchError) {
       console.error('Error fetching updated student:', fetchError);
-      throw new Error(`Erro ao buscar aluno atualizado: ${fetchError.message}`);
+      throw new Error(`Erro ao buscar os dados atualizados do aluno: ${fetchError.message}`);
     }
-    
-    if (!updatedData || updatedData.length === 0) {
-      throw new Error('Não foi possível encontrar o aluno após a atualização');
+
+    if (!updatedData) {
+      throw new Error('Não foi possível encontrar o aluno após a atualização.');
     }
-    
-    // Buscar registros de presença para o aluno
-    let attendanceData = [];
-    try {
-      const { data: attendanceResult } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('student_id', id);
-      
-      if (attendanceResult) {
-        attendanceData = attendanceResult;
-      }
-    } catch (attendanceErr) {
-      console.error('Error fetching attendance:', attendanceErr);
-      // Continuar sem os dados de presença
-    }
-    
-    // Converter para o formato da aplicação e adicionar os registros de presença
-    const student = dbStudentToStudent(updatedData[0]);
-    student.attendance = attendanceData.length > 0 ? attendanceData.map(dbAttendanceToAttendance) : [];
-    
-    return student;
+
+    return dbStudentToStudent(updatedData as DatabaseStudent);
   } catch (error) {
-    console.error('Error in updateStudent:', error);
+    console.error('Falha geral na função updateStudent:', error);
     throw error;
   }
-};
+}
 
 export const deleteStudent = async (id: string): Promise<void> => {
   try {

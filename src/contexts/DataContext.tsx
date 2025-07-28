@@ -130,29 +130,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateStudent = async (id: string, updates: Partial<Student>) => {
     try {
       console.log('DataContext - updateStudent - Iniciando atualização do estudante:', id);
+      console.log('DataContext - updateStudent - Dados de atualização recebidos:', JSON.stringify(updates, null, 2));
       
-      // Chamar a função de atualização no banco de dados
-      await db.updateStudent(id, updates);
-      console.log('DataContext - updateStudent - Atualização enviada ao banco de dados');
-      
-      // Forçar uma nova busca direta do estudante para garantir dados atualizados
-      console.log('DataContext - updateStudent - Forçando nova busca do estudante para garantir dados atualizados');
-      const freshStudent = await db.getStudentById(id);
-      console.log('DataContext - updateStudent - Dados frescos obtidos diretamente do banco:', JSON.stringify(freshStudent, null, 2));
-      
-      // Atualizar o estado com o objeto completo retornado pelo banco de dados
-      setStudents(prev => {
-        const newStudents = prev.map(student => 
-          student.id === id ? freshStudent : student
-        );
-        console.log('DataContext - updateStudent - Lista de estudantes atualizada com dados frescos');
-        return newStudents;
-      });
-      
-      console.log('DataContext - updateStudent - Estado atualizado com sucesso');
-      return freshStudent; // Retornar os dados mais recentes
+      const updatedStudent = await db.updateStudent(id, updates);
+      setStudents(prev => 
+        prev.map(student => (student.id === id ? updatedStudent : student))
+      );
+      return updatedStudent;
     } catch (error: any) {
-      console.error('Error updating student:', error);
+      console.error('Erro ao atualizar aluno:', error);
       throw new Error(error.message || 'Erro ao atualizar aluno');
     }
   };

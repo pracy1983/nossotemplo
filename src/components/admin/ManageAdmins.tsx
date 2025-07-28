@@ -49,34 +49,51 @@ const ManageAdmins: React.FC = () => {
 
   // Handle role change
   const handleRoleChange = (studentId: string, newRole: UserRole) => {
-    setRoleChanges(prev => ({
-      ...prev,
-      [studentId]: newRole
-    }));
+    console.log('ManageAdmins - handleRoleChange - ID:', studentId);
+    console.log('ManageAdmins - handleRoleChange - Nova função:', newRole);
+    
+    setRoleChanges(prev => {
+      const updatedChanges = {
+        ...prev,
+        [studentId]: newRole
+      };
+      console.log('ManageAdmins - handleRoleChange - Alterações pendentes:', updatedChanges);
+      return updatedChanges;
+    });
   };
 
   // Save all role changes
   const handleSaveChanges = async () => {
+    console.log('ManageAdmins - handleSaveChanges - Iniciando salvamento de alterações');
+    console.log('ManageAdmins - handleSaveChanges - Alterações pendentes:', roleChanges);
     setIsSaving(true);
     
     try {
       const updatePromises = Object.entries(roleChanges).map(([studentId, newRole]) => {
+        console.log(`ManageAdmins - handleSaveChanges - Preparando atualização para usuário ${studentId} para função ${newRole}`);
+        
         const updates: Partial<Student> = {
           role: newRole,
           isAdmin: newRole === 'admin'
         };
         
+        console.log(`ManageAdmins - handleSaveChanges - Dados de atualização:`, updates);
         return updateStudent(studentId, updates);
       });
 
-      await Promise.all(updatePromises);
+      console.log(`ManageAdmins - handleSaveChanges - Enviando ${updatePromises.length} atualizações para processamento`);
+      const results = await Promise.all(updatePromises);
+      console.log('ManageAdmins - handleSaveChanges - Resultados das atualizações:', results);
+      
       setRoleChanges({});
       alert('Alterações salvas com sucesso!');
     } catch (error) {
       console.error('Error saving role changes:', error);
+      console.error('ManageAdmins - handleSaveChanges - Detalhes do erro:', error);
       alert('Erro ao salvar alterações. Tente novamente.');
     } finally {
       setIsSaving(false);
+      console.log('ManageAdmins - handleSaveChanges - Processo finalizado');
     }
   };
 

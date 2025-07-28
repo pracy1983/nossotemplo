@@ -8,8 +8,6 @@ import StudentProfile from './components/student/StudentProfile';
 import ConvitePage from './components/auth/ConvitePage';
 import ResetPasswordPage from './components/auth/ResetPasswordPage';
 import Layout from './components/common/Layout';
-import TestUpdateProfile from './tests/TestUpdateProfile';
-import SimpleTestComponent from './tests/SimpleTestComponent';
 import { checkSupabaseConnection } from './utils/checkConnection';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -158,7 +156,7 @@ function App() {
             {/* Rota inicial - redireciona para dashboard se autenticado, ou login se não */}
             <Route path="/" element={
               <PrivateRoute>
-                <Dashboard />
+                <Navigate to="/dashboard" replace />
               </PrivateRoute>
             } />
             
@@ -179,23 +177,6 @@ function App() {
               <PrivateRoute>
                 <Layout showSidebar={false}>
                   <StudentProfile />
-                </Layout>
-              </PrivateRoute>
-            } />
-            
-            {/* Rotas de teste para atualização de perfil */}
-            <Route path="/teste-atualizacao" element={
-              <PrivateRoute>
-                <Layout showSidebar={false}>
-                  <TestUpdateProfile />
-                </Layout>
-              </PrivateRoute>
-            } />
-            
-            <Route path="/teste-simples" element={
-              <PrivateRoute>
-                <Layout showSidebar={false}>
-                  <SimpleTestComponent />
                 </Layout>
               </PrivateRoute>
             } />
