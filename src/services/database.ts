@@ -470,7 +470,7 @@ export const getStudentById = async (id: string): Promise<Student> => {
     
     // Buscar registros de presença para o estudante
     const { data: attendanceData, error: attendanceError } = await supabase
-      .from('attendance')
+      .from('attendance_records')
       .select('*')
       .eq('student_id', id);
     
