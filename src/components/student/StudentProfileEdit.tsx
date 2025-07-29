@@ -10,7 +10,7 @@ interface StudentProfileProps {
 }
 
 const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
-  const { updateStudent } = useData();
+  const { updateStudent, refreshData } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Student>>(student);
   const [photo, setPhoto] = useState<string>(student.photo || '');
@@ -39,7 +39,16 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
       setPhoto(updatedStudent.photo || '');
       setIsEditing(false);
       
-      alert('Perfil atualizado com sucesso!');
+      // Forçar atualização do contexto de dados
+      try {
+        await refreshData();
+      } catch (refreshError) {
+        console.error('Erro ao atualizar dados após edição:', refreshError);
+      }
+      
+      // Forçar recarregamento da página para garantir que todos os componentes sejam atualizados
+      window.location.reload();
+      
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Erro ao atualizar perfil. Tente novamente.');
