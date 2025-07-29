@@ -581,13 +581,10 @@ export const updateStudent = async (id: string, updates: Partial<Student>): Prom
     }
 
     // Após a atualização, busca o registro completo e atualizado do banco.
-    // O select com `*, attendance(*)` busca o aluno e seus registros de presença de uma vez.
+    // Buscamos apenas os dados do aluno, sem tentar buscar registros de attendance
     const { data: updatedData, error: fetchError } = await supabase
       .from('students')
-      .select(`
-        *,
-        attendance (*)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
