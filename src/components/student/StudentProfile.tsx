@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Edit3, Save, X, Calendar, User, Mail, Phone, MapPin, BookOpen, CreditCard, Clock, BarChart3, GraduationCap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, User, BookOpen, CreditCard, Clock, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { Student } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
-import { formatDate, validateEmail, formatPhone } from '../../utils/helpers';
 import StudentDashboard from './StudentDashboard';
 import StudentProfileEdit from './StudentProfileEdit';
 import StudentLessons from './StudentLessons';
@@ -14,19 +13,38 @@ import StudentHistory from './StudentHistory';
 
 const StudentMain: React.FC = () => {
   const { user } = useAuth();
-  const { students } = useData();
+  const { students, refreshData } = useData();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [currentStudent, setCurrentStudent] = useState<Student | undefined>();
 
   // Find the current student - try multiple approaches
-  let student: Student | undefined;
-
-  if (user?.student) {
-    student = user.student;
-  } else if (user?.studentId) {
-    student = students.find(s => s.id === user.studentId);
-  } else if (user?.email) {
-    student = students.find(s => s.email === user.email);
-  }
+  useEffect(() => {
+    let foundStudent: Student | undefined;
+    
+    if (user?.student) {
+      foundStudent = user.student;
+    } else if (user?.studentId) {
+      foundStudent = students.find(s => s.id === user.studentId);
+    } else if (user?.email) {
+      foundStudent = students.find(s => s.email === user.email);
+    }
+    
+    if (foundStudent) {
+      setCurrentStudent(foundStudent);
+    }
+  }, [user, students]);
+  
+  const handleStudentUpdated = async (updatedStudent: Student) => {
+    setCurrentStudent(updatedStudent);
+    try {
+      await refreshData();
+    } catch (error) {
+      console.error('Error refreshing data after student update:', error);
+    }
+  };
+  
+  // Use currentStudent as the source of truth
+  const student = currentStudent;
 
   if (!student) {
     return (
@@ -69,7 +87,7 @@ const StudentMain: React.FC = () => {
       case 'dashboard':
         return <StudentDashboard student={student} />;
       case 'profile':
-        return <StudentProfileEdit student={student} />;
+        return student ? <StudentProfileEdit student={student} onStudentUpdated={handleStudentUpdated} /> : null;
       case 'lessons':
         return <StudentLessons student={student} />;
       case 'attendance':

@@ -9,11 +9,17 @@ interface StudentProfileProps {
   student: Student;
 }
 
-const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
+interface StudentProfileProps {
+  student: Student;
+  onStudentUpdated?: (student: Student) => void;
+}
+
+const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentUpdated }) => {
   const { updateStudent, refreshData } = useData();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Student>>(student);
   const [photo, setPhoto] = useState<string>(student.photo || '');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     if (!formData.fullName || !formData.email) {
@@ -27,6 +33,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
     }
 
     try {
+      setIsSaving(true);
       console.log('StudentProfileEdit - handleSave - Enviando atualização para:', student.id);
       console.log('StudentProfileEdit - handleSave - Dados a serem atualizados:', { ...formData, photo });
       
@@ -37,21 +44,27 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
       // Atualizar o estado local com os dados atualizados
       setFormData(updatedStudent);
       setPhoto(updatedStudent.photo || '');
-      setIsEditing(false);
       
-      // Forçar atualização do contexto de dados
+      // Notificar o componente pai sobre a atualização
+      if (onStudentUpdated) {
+        onStudentUpdated(updatedStudent);
+      }
+      
+      // Atualizar o contexto de dados
       try {
         await refreshData();
       } catch (refreshError) {
         console.error('Erro ao atualizar dados após edição:', refreshError);
       }
       
-      // Forçar recarregamento da página para garantir que todos os componentes sejam atualizados
-      window.location.reload();
+      // Desativar o modo de edição
+      setIsEditing(false);
       
     } catch (error) {
       console.error('Error updating profile:', error);
       alert('Erro ao atualizar perfil. Tente novamente.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -101,10 +114,11 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={handleSave}
-              className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
+              disabled={isSaving}
+              className={`flex items-center px-4 py-2 ${isSaving ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg transition-colors`}
             >
-              <Save className="w-4 h-4" />
-              <span>Salvar</span>
+              <Save className={`w-4 h-4 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
+              {isSaving ? 'Salvando...' : 'Salvar'}
             </button>
             <button
               onClick={handleCancel}
