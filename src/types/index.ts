@@ -21,7 +21,7 @@ export interface Student {
   attendance: AttendanceRecord[];
   isAdmin: boolean;
   isGuest: boolean;
-  role: 'admin' | 'collaborator' | 'student';
+  role: UserRole;
   // Address fields
   street?: string;
   number?: string;
@@ -146,7 +146,7 @@ export interface StudentRegistrationData {
 export type ViewMode = 'list' | 'card';
 export type FilterStatus = 'all' | 'active' | 'inactive';
 export type FilterUnit = 'all' | string; // Changed to support dynamic temples
-export type FilterRole = 'all' | 'admin' | 'collaborator' | 'student';
-export type UserRole = 'admin' | 'collaborator' | 'student';
+export type FilterRole = 'all' | 'owner' | 'anciao' | 'fundador' | 'moderador' | 'admin' | 'collaborator' | 'student';
+export type UserRole = 'owner' | 'anciao' | 'fundador' | 'moderador' | 'admin' | 'collaborator' | 'student';
 export type ApprovalFilter = 'all' | 'pending' | 'approved';
 export type TurmaStatus = 'all' | 'em-andamento' | 'encerrada' | 'planejada';

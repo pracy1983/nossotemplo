@@ -31,18 +31,48 @@ export const DEFAULT_TEMPLES = {
 } as const;
 
 export const USER_ROLES = {
+  owner: 'Owner',
+  anciao: 'Ancião',
+  fundador: 'Fundador',
+  moderador: 'Moderador',
   admin: 'Administrador',
   collaborator: 'Colaborador',
   student: 'Aluno'
 } as const;
 
 export const ROLE_COLORS = {
+  owner: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
+  anciao: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
+  fundador: 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30',
+  moderador: 'bg-sky-600/20 text-sky-400 border-sky-600/30',
   admin: 'bg-red-600/20 text-red-400 border-red-600/30',
   collaborator: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
   student: 'bg-gray-600/20 text-gray-400 border-gray-600/30'
 } as const;
 
 export const ROLE_PERMISSIONS = {
+  owner: [
+    'Acesso total ao sistema',
+    'Configurar/editar todos os eventos e alunos',
+    'Gerenciar membros e permissões',
+    'Acesso completo a todos os templos'
+  ],
+  anciao: [
+    'Ver todos os relatórios de todos os templos',
+    'Editar todos os eventos e pessoas/membros',
+    'Adicionar pessoas de todas as cidades'
+  ],
+  fundador: [
+    'Criar/editar/cadastrar pessoas no seu templo',
+    'Ver relatórios apenas do seu templo',
+    'Acesso à dashboard com filtros atuais'
+  ],
+  moderador: [
+    'Adicionar novos membros (alunos)',
+    'Marcar presença',
+    'Criar/editar eventos',
+    'Sem acesso a relatórios ou pagamentos'
+  ],
   admin: [
     'Todas as funções disponíveis',
     'Adicionar e deletar administradores',

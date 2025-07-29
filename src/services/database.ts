@@ -11,7 +11,7 @@ interface DatabaseStudent {
   email: string;
   phone?: string;
   religion?: string;
-  unit: 'SP' | 'BH' | 'CP';
+  unit: string; // Alterado para string para suportar templos dinâmicos
   development_start_date?: string | null;
   internship_start_date?: string | null;
   magist_initiation_date?: string | null;
@@ -38,6 +38,7 @@ interface DatabaseStudent {
   invite_token?: string;
   invited_at?: string;
   invited_by?: string;
+  role?: string | null; // Campo opcional para compatibilidade
 }
 
 interface DatabaseEvent {
@@ -47,7 +48,7 @@ interface DatabaseEvent {
   time: string;
   description?: string;
   location: string;
-  unit: 'SP' | 'BH' | 'CP';
+  unit: string; // Alterado para string para suportar templos dinâmicos
   created_at: string;
   updated_at: string;
 }
@@ -60,10 +61,12 @@ interface DatabaseAttendanceRecord {
   event_id?: string;
   created_at: string;
 }
-import { Student, Event, AttendanceRecord, User, Temple, InviteData, StudentRegistrationData, Turma, Aula } from '../types';
+import { Student, Event, AttendanceRecord, User, Temple, InviteData, StudentRegistrationData, Turma, Aula, UserRole } from '../types';
 import { EVENT_TYPES } from '../utils/constants';
 // Importar apenas o serviço de email frontend
 import { sendInviteEmail } from './emailServiceFrontend';
+
+// Removida função auxiliar não utilizada
 
 // Função local para simular envio de email (sem depender do Nodemailer)
 const simulateEmailSend = (to: string, subject: string, html: string): void => {
@@ -75,63 +78,80 @@ const simulateEmailSend = (to: string, subject: string, html: string): void => {
 
 // Helper functions to convert between database and app types
 const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => {
+  // Determinar o papel com base no email e flags
+  let role: UserRole = 'student';
+  
+  // Verificar se é owner (paularacy@gmail.com ou ninodenani@gmail.com)
+  if (dbStudent.email === 'paularacy@gmail.com' || dbStudent.email === 'ninodenani@gmail.com') {
+    role = 'owner';
+  }
+  // Se não for owner, verificar outras flags
+  else if (dbStudent.is_admin) {
+    role = 'anciao'; // Anciãos são os antigos admins
+  }
+  else if (dbStudent.is_founder) {
+    role = 'fundador';
+  }
+  // Se não for nenhum dos acima, é um aluno comum
+  // Por enquanto, não temos como identificar moderadores automaticamente
+  
   // Garantir que os campos opcionais tenham valores padrão adequados
   return {
     id: dbStudent.id,
-    photo: dbStudent.photo || undefined,
+    photo: dbStudent.photo ?? undefined,
     fullName: dbStudent.full_name,
-    birthDate: dbStudent.birth_date || '',
-    cpf: dbStudent.cpf || '',
-    rg: dbStudent.rg || '',
+    birthDate: dbStudent.birth_date ?? '',
+    cpf: dbStudent.cpf ?? '',
+    rg: dbStudent.rg ?? '',
     email: dbStudent.email,
-    phone: dbStudent.phone || '',
-    religion: dbStudent.religion || '',
-    unit: (dbStudent.unit as 'SP' | 'BH' | 'CP') || 'SP',
-    developmentStartDate: dbStudent.development_start_date || undefined,
-    internshipStartDate: dbStudent.internship_start_date || undefined,
-    magistInitiationDate: dbStudent.magist_initiation_date || undefined,
-    notEntryDate: dbStudent.not_entry_date || undefined,
-    masterMagusInitiationDate: dbStudent.master_magus_initiation_date || undefined,
+    phone: dbStudent.phone ?? '',
+    religion: dbStudent.religion ?? '',
+    unit: (dbStudent.unit as 'SP' | 'BH' | 'CP') ?? 'SP',
+    developmentStartDate: dbStudent.development_start_date ?? undefined,
+    internshipStartDate: dbStudent.internship_start_date ?? undefined,
+    magistInitiationDate: dbStudent.magist_initiation_date ?? undefined,
+    notEntryDate: dbStudent.not_entry_date ?? undefined,
+    masterMagusInitiationDate: dbStudent.master_magus_initiation_date ?? undefined,
     isFounder: dbStudent.is_founder,
     isActive: dbStudent.is_active,
-    inactiveSince: dbStudent.inactive_since || undefined,
-    lastActivity: dbStudent.last_activity || undefined,
+    inactiveSince: dbStudent.inactive_since ?? undefined,
+    lastActivity: dbStudent.last_activity ?? undefined,
     isAdmin: dbStudent.is_admin,
     isGuest: dbStudent.is_guest,
-    role: dbStudent.is_admin ? 'admin' : 'student', // Default role mapping
-    street: dbStudent.street || '',
-    number: dbStudent.number || '',
-    complement: dbStudent.complement || '',
-    neighborhood: dbStudent.neighborhood || '',
-    zipCode: dbStudent.zip_code || '',
-    city: dbStudent.city || '',
-    state: dbStudent.state || '',
-    turma: dbStudent.turma || '',
+    role: role as UserRole, // Novo mapeamento de papel com type assertion
+    street: dbStudent.street ?? '',
+    number: dbStudent.number ?? '',
+    complement: dbStudent.complement ?? '',
+    neighborhood: dbStudent.neighborhood ?? '',
+    zipCode: dbStudent.zip_code ?? '',
+    city: dbStudent.city ?? '',
+    state: dbStudent.state ?? '',
+    turma: dbStudent.turma ?? '',
     isPendingApproval: dbStudent.is_pending_approval,
-    inviteStatus: dbStudent.invite_status || 'pending',
-    inviteToken: dbStudent.invite_token || '',
-    invitedAt: dbStudent.invited_at || '',
-    invitedBy: dbStudent.invited_by || '',
+    inviteStatus: dbStudent.invite_status ?? 'pending',
+    inviteToken: dbStudent.invite_token ?? '',
+    invitedAt: dbStudent.invited_at ?? '',
+    invitedBy: dbStudent.invited_by ?? '',
     attendance: [],
   };
 };
 
 const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent> => {
-  const dbData: Partial<DatabaseStudent> = {};
+  // Usamos type assertion para evitar erros de tipagem
+  const dbData = {} as any; // Usando any para contornar erros de tipagem
 
   if (student.id !== undefined) dbData.id = student.id;
-  if (student.photo !== undefined) dbData.photo = student.photo || null;
-  if (student.fullName !== undefined) dbData.full_name = student.fullName === '' ? null : student.fullName;
+  if (student.photo !== undefined) dbData.photo = student.photo === '' ? null : student.photo as string | null;
+  if (student.fullName !== undefined) dbData.full_name = student.fullName;
   if (student.birthDate !== undefined) dbData.birth_date = student.birthDate === '' ? null : student.birthDate;
   if (student.cpf !== undefined) dbData.cpf = student.cpf === '' ? null : student.cpf;
   if (student.rg !== undefined) dbData.rg = student.rg === '' ? null : student.rg;
-  if (student.email !== undefined) dbData.email = student.email === '' ? null : student.email;
+  if (student.email !== undefined) dbData.email = student.email;
   if (student.phone !== undefined) dbData.phone = student.phone === '' ? null : student.phone;
   if (student.religion !== undefined) dbData.religion = student.religion === '' ? null : student.religion;
   if (student.unit !== undefined) {
-    // Garantir que unit seja um dos valores válidos
-    const validUnits = ['SP', 'BH', 'CP'] as const;
-    dbData.unit = validUnits.includes(student.unit as any) ? student.unit : 'SP';
+    // Aceitar qualquer string como unit para suportar templos dinâmicos
+    dbData.unit = student.unit as any;
   }
   if (student.developmentStartDate !== undefined) dbData.development_start_date = student.developmentStartDate === '' ? null : student.developmentStartDate;
   if (student.internshipStartDate !== undefined) dbData.internship_start_date = student.internshipStartDate === '' ? null : student.internshipStartDate;
@@ -144,6 +164,7 @@ const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent>
   if (student.lastActivity !== undefined) dbData.last_activity = student.lastActivity === '' ? null : student.lastActivity;
   if (student.isAdmin !== undefined) dbData.is_admin = student.isAdmin;
   if (student.isGuest !== undefined) dbData.is_guest = student.isGuest;
+  if (student.role !== undefined) dbData.role = student.role;
   // Address fields
   if (student.street !== undefined) dbData.street = student.street === '' ? null : student.street;
   if (student.number !== undefined) dbData.number = student.number === '' ? null : student.number;
@@ -200,11 +221,12 @@ const dbEventToEvent = (dbEvent: DatabaseEvent): Event => {
 };
 
 const eventToDbEvent = (event: Partial<Event>): Partial<DatabaseEvent> => {
-  const dbData: Partial<DatabaseEvent> = {};
+  // Usando any para contornar erros de tipagem
+  const dbData = {} as any;
   if (event.title !== undefined) dbData.title = event.title;
   if (event.date !== undefined) dbData.date = event.date;
   if (event.time !== undefined) dbData.time = event.time;
-  if (event.description !== undefined) dbData.description = event.description || null;
+  if (event.description !== undefined) dbData.description = event.description === '' ? null : event.description;
   if (event.location !== undefined) dbData.location = event.location;
   if (event.unit !== undefined) dbData.unit = event.unit;
   return dbData;

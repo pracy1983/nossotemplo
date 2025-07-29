@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Shield, ShieldCheck, Save, Eye, Filter, User, Users, Crown, AlertTriangle, X, Edit3, Trash2 } from 'lucide-react';
+import { Search, ShieldCheck, Save, Eye, Filter, User, Crown, AlertTriangle, X, Edit3, Trash2 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { Student, FilterUnit, FilterRole, UserRole } from '../../types';
 import { DEFAULT_TEMPLES, USER_ROLES, ROLE_COLORS, ROLE_PERMISSIONS } from '../../utils/constants';
@@ -28,9 +28,16 @@ const ManageAdmins: React.FC = () => {
       return roleChanges[student.id];
     }
     
-    // Determine role based on current flags
-    if (student.isAdmin) return 'admin';
-    if (student.role === 'collaborator') return 'collaborator';
+    // Determine role based on email, flags and role
+    if (student.email === 'paularacy@gmail.com' || student.email === 'ninodenani@gmail.com') {
+      return 'owner';
+    } else if (student.isAdmin) {
+      return 'anciao';
+    } else if (student.isFounder) {
+      return 'fundador';
+    } else if (student.role === 'collaborator') {
+      return 'moderador';
+    }
     return 'student';
   };
 
@@ -51,6 +58,13 @@ const ManageAdmins: React.FC = () => {
   const handleRoleChange = (studentId: string, newRole: UserRole) => {
     console.log('ManageAdmins - handleRoleChange - ID:', studentId);
     console.log('ManageAdmins - handleRoleChange - Nova função:', newRole);
+    
+    // Não permitir alterar o papel de owner
+    const student = students.find(s => s.id === studentId);
+    if (student && (student.email === 'paularacy@gmail.com' || student.email === 'ninodenani@gmail.com')) {
+      alert('Não é possível alterar o papel de Owner.');
+      return;
+    }
     
     setRoleChanges(prev => {
       const updatedChanges = {
@@ -74,7 +88,8 @@ const ManageAdmins: React.FC = () => {
         
         const updates: Partial<Student> = {
           role: newRole,
-          isAdmin: newRole === 'admin'
+          isAdmin: newRole === 'anciao' || newRole === 'owner',
+          isFounder: newRole === 'fundador'
         };
         
         console.log(`ManageAdmins - handleSaveChanges - Dados de atualização:`, updates);
