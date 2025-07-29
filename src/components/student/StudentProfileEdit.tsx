@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { Edit3, Save, X, Upload } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Student } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
 import { formatDate, validateEmail, formatPhone } from '../../utils/helpers';
 
-interface StudentProfileProps {
-  student: Student;
-}
+
 
 interface StudentProfileProps {
   student: Student;
@@ -16,6 +15,7 @@ interface StudentProfileProps {
 
 const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentUpdated }) => {
   const { updateStudent, refreshData } = useData();
+  const { user, login } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Student>>(student);
   const [photo, setPhoto] = useState<string>(student.photo || '');
@@ -48,6 +48,21 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentU
       // Notificar o componente pai sobre a atualização
       if (onStudentUpdated) {
         onStudentUpdated(updatedStudent);
+      }
+      
+      // Se o usuário logado é o mesmo estudante que foi atualizado, re-autenticar para atualizar o AuthContext
+      if (user && user.student && user.student.id === updatedStudent.id) {
+        const storedEmail = localStorage.getItem('nosso-templo-email');
+        const storedPassword = localStorage.getItem('nosso-templo-password');
+        
+        if (storedEmail && storedPassword) {
+          try {
+            console.log('Re-autenticando para atualizar dados do usuário...');
+            await login(storedEmail, storedPassword);
+          } catch (authError) {
+            console.error('Erro ao re-autenticar após atualização:', authError);
+          }
+        }
       }
       
       // Atualizar o contexto de dados

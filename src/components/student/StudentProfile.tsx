@@ -21,26 +21,39 @@ const StudentMain: React.FC = () => {
   useEffect(() => {
     let foundStudent: Student | undefined;
     
+    // Priorizar dados do AuthContext se disponíveis
     if (user?.student) {
       foundStudent = user.student;
+      console.log('StudentProfile: Usando dados do AuthContext:', foundStudent.fullName);
     } else if (user?.studentId) {
       foundStudent = students.find(s => s.id === user.studentId);
+      console.log('StudentProfile: Encontrado por studentId:', foundStudent?.fullName);
     } else if (user?.email) {
       foundStudent = students.find(s => s.email === user.email);
+      console.log('StudentProfile: Encontrado por email:', foundStudent?.fullName);
     }
     
     if (foundStudent) {
       setCurrentStudent(foundStudent);
+      console.log('StudentProfile: Estudante atual definido:', foundStudent.fullName);
+    } else {
+      console.log('StudentProfile: Nenhum estudante encontrado');
     }
   }, [user, students]);
   
   const handleStudentUpdated = async (updatedStudent: Student) => {
+    console.log('StudentProfile: Estudante atualizado recebido:', updatedStudent.fullName);
     setCurrentStudent(updatedStudent);
-    try {
-      await refreshData();
-    } catch (error) {
-      console.error('Error refreshing data after student update:', error);
-    }
+    
+    // Forçar uma pequena pausa para garantir que o AuthContext seja atualizado primeiro
+    setTimeout(async () => {
+      try {
+        await refreshData();
+        console.log('StudentProfile: Dados atualizados com sucesso');
+      } catch (error) {
+        console.error('Error refreshing data after student update:', error);
+      }
+    }, 100);
   };
   
   // Use currentStudent as the source of truth
