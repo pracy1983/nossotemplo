@@ -16,6 +16,68 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Função auxiliar para processar o token e inicializar a sessão
+  const processToken = async (token: string, type: string, refresh_token: string) => {
+    console.log('Processando token de recuperação...');
+    console.log('Token recebido:', token);
+    console.log('Tipo do token:', type);
+    
+    try {
+      // Verificar se o token é um token JWT válido ou apenas um identificador
+      if (token.length < 30) {
+        console.log('Token parece ser um identificador simples, não um JWT válido');
+        
+        // Se for apenas um identificador, podemos tentar usar o token como parte de uma URL de callback
+        // que o Supabase possa reconhecer
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (!userError && userData?.user) {
+          console.log('Usuário já está autenticado:', userData.user);
+          setAccessToken(token);
+          setTokenVerified(true);
+          return true;
+        }
+        
+        console.error('Token não é válido para recuperação de senha');
+        setError('Link de redefinição inválido. Solicite um novo link.');
+        return false;
+      }
+      
+      // Tentar inicializar a sessão com o token JWT
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: refresh_token || ''
+      });
+      
+      if (sessionError) {
+        console.error('Erro ao inicializar sessão:', sessionError);
+        
+        // Verificar se o usuário já está autenticado
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (!userError && userData?.user) {
+          console.log('Usuário já está autenticado:', userData.user);
+          setAccessToken(token);
+          setTokenVerified(true);
+          return true;
+        }
+        
+        setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
+        return false;
+      }
+      
+      console.log('Sessão inicializada com sucesso!');
+      setAccessToken(token);
+      setTokenVerified(true);
+      setError('');
+      return true;
+    } catch (error) {
+      console.error('Exceção ao processar token de recuperação:', error);
+      setError('Erro ao processar token de recuperação. Por favor, solicite um novo link.');
+      return false;
+    }
+  };
+
   useEffect(() => {
     const verifyToken = async () => {
       try {
@@ -205,14 +267,101 @@ const ResetPasswordPage: React.FC = () => {
     }
   };
 
-  verifyToken();
-}, [navigate, location]);
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Redefinir Senha
+          </h2>
+        </div>
+        
+        {tokenVerified ? (
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="rounded-md bg-red-50 p-4 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="rounded-md shadow-sm -space-y-px">
+              <div>
+                <label htmlFor="password" className="sr-only">Nova Senha</label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Nova senha"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setError('');
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="confirm-password" className="sr-only">Confirmar Nova Senha</label>
+                <div className="relative">
+                  <input
+                    id="confirm-password"
+                    name="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                    placeholder="Confirme a nova senha"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setError('');
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setError('');
-              {isLoading ? 'Processando...' : 'Redefinir Senha'}
-            </button>
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Processando...' : 'Redefinir Senha'}
+              </button>
+            </div>
           </form>
         ) : (
           <div className="text-center">
