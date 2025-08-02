@@ -205,79 +205,12 @@ const ResetPasswordPage: React.FC = () => {
     }
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900">Redefinir Senha</h1>
+  verifyToken();
+}, [navigate, location]);
 
-        {error && !tokenVerified && (
-          <div className="mb-4 flex items-center rounded-md bg-red-50 p-4 text-red-800">
-            <AlertCircle className="mr-2 h-5 w-5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {tokenVerified ? (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700">
-                Nova Senha
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="w-full rounded-lg border border-gray-300 p-2.5 pr-10 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Digite sua nova senha"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError('');
-                  }}
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium text-gray-700">
-                Confirmar Senha
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  className="w-full rounded-lg border border-gray-300 p-2.5 pr-10 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Confirme sua nova senha"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    setError('');
-                  }}
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white font-medium py-3 px-4 rounded-lg transition-colors focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-gray-900"
-            >
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
               {isLoading ? 'Processando...' : 'Redefinir Senha'}
             </button>
           </form>
