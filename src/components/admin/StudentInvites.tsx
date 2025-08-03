@@ -437,38 +437,36 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         <div className="flex space-x-3">
           <button
             onClick={() => setShowInviteModal(true)}
-      </div>
-      
-      <div className="flex space-x-3">
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
-        >
-          <Send className="w-4 h-4" />
-          <span>Enviar Convite</span>
-        </button>
-        <button
-          type="button"
-          onClick={onNavigateToAddStudent}
-          className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Adicionar Membro</span>
-        </button>
-        <div className="bg-yellow-600/10 border border-yellow-600/20 rounded-xl p-6">
-          <div className="flex items-center space-x-3">
-            <AlertTriangle className="w-6 h-6 text-yellow-400" />
-            <div>
-              <h3 className="text-yellow-400 font-semibold">
-                {pendingApprovals.length} cadastro(s) aguardando aprovação
-              </h3>
-              <p className="text-yellow-300 text-sm">
-                Há novos membros que completaram o cadastro e aguardam sua aprovação.
-              </p>
+            className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            <span>Enviar Convite</span>
+          </button>
+          <button
+            type="button"
+            onClick={onNavigateToAddStudent}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar Membro</span>
+          </button>
+          {pendingApprovals.length > 0 && (
+            <div className="bg-yellow-600/10 border border-yellow-600/20 rounded-xl p-6">
+              <div className="flex items-center space-x-3">
+                <AlertTriangle className="w-6 h-6 text-yellow-400" />
+                <div>
+                  <h3 className="text-yellow-400 font-semibold">
+                    {pendingApprovals.length} cadastro(s) aguardando aprovação
+                  </h3>
+                  <p className="text-yellow-300 text-sm">
+                    Há novos membros que completaram o cadastro e aguardam sua aprovação.
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Filters */}
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
