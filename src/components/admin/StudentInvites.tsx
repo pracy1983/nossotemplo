@@ -424,19 +424,28 @@ const StudentInvites: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Aprovar Membro</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Gerenciar Membros</h1>
           <p className="text-gray-400">
             Envie convites para novos membros e aprove cadastros pendentes
           </p>
         </div>
         
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Enviar Convite</span>
-        </button>
+        <div className="flex space-x-3">
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            <span>Enviar Convite</span>
+          </button>
+          <button
+            onClick={() => {/* Adicionar lógica para adicionar membro diretamente */}}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar Membro</span>
+          </button>
+        </div>
       </div>
 
       {/* Pending Approvals Alert */}
