@@ -439,7 +439,7 @@ const StudentInvites: React.FC = () => {
             <span>Enviar Convite</span>
           </button>
           <button
-            onClick={() => {/* Adicionar lógica para adicionar membro diretamente */}}
+            onClick={() => setShowInviteModal(true)}
             className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />

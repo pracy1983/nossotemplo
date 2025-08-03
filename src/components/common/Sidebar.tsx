@@ -61,8 +61,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </div>
                   
                   {item.badge && (
