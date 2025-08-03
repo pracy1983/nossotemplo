@@ -12,8 +12,11 @@ import Statistics from './Statistics';
 import Temples from './Temples';
 import Turmas from './Turmas';
 import ImportMembers from './ImportMembers';
+import StudentProfileEdit from '../student/StudentProfileEdit';
+import { useAuth } from '../../contexts/AuthContext';
 
 const AdminPanel: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleNavigateToAddStudent = () => {
@@ -72,6 +75,8 @@ const AdminPanel: React.FC = () => {
         return <ImportMembers />;
       case 'statistics':
         return <Statistics />;
+      case 'edit-profile':
+        return <StudentProfileEdit student={user.student} />;
       default:
         return (
           <Dashboard 

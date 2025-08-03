@@ -43,7 +43,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'events', label: 'Eventos', icon: Calendar },
     { id: 'attendance', label: 'Marcar Presença', icon: CheckSquare },
     { id: 'import', label: 'Importar Membros', icon: Upload },
-    { id: 'statistics', label: 'Estatísticas', icon: BarChart3 }
+    { id: 'statistics', label: 'Estatísticas', icon: BarChart3 },
+    { id: 'edit-profile', label: 'Editar Perfil', icon: UserCheck }
   ];
 
   return (
