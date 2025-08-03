@@ -12,6 +12,7 @@ import Statistics from './Statistics';
 import Temples from './Temples';
 import Turmas from './Turmas';
 import ImportMembers from './ImportMembers';
+import StudentProfileEdit from '../student/StudentProfileEdit';
 
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -72,6 +73,8 @@ const AdminPanel: React.FC = () => {
         return <ImportMembers />;
       case 'statistics':
         return <Statistics />;
+      case 'edit-profile':
+        return <StudentProfileEdit />;
       default:
         return (
           <Dashboard 
