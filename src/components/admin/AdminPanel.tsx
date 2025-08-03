@@ -55,7 +55,7 @@ const AdminPanel: React.FC = () => {
       case 'add-student':
         return <AddStudent onNavigateToList={handleNavigateToStudentList} />;
       case 'student-invites':
-        return <StudentInvites />;
+        return <StudentInvites onNavigateToAddStudent={handleNavigateToAddStudent} />;
       case 'manage-admins':
         return <ManageAdmins />;
       case 'temples':

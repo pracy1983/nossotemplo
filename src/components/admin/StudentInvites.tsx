@@ -7,7 +7,11 @@ import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
 
-const StudentInvites: React.FC = () => {
+interface StudentInvitesProps {
+  onNavigateToAddStudent?: () => void;
+}
+
+const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent }) => {
   const { students, temples, addStudent } = useData();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -433,23 +437,24 @@ const StudentInvites: React.FC = () => {
         <div className="flex space-x-3">
           <button
             onClick={() => setShowInviteModal(true)}
-            className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            <Send className="w-4 h-4" />
-            <span>Enviar Convite</span>
-          </button>
-          <a
-            href="/add-student"
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white no-underline"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar Membro</span>
-          </a>
-        </div>
       </div>
-
-      {/* Pending Approvals Alert */}
-      {pendingApprovals.length > 0 && (
+      
+      <div className="flex space-x-3">
+        <button
+          onClick={() => setShowInviteModal(true)}
+          className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+        >
+          <Send className="w-4 h-4" />
+          <span>Enviar Convite</span>
+        </button>
+        <button
+          type="button"
+          onClick={onNavigateToAddStudent}
+          className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors text-white"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Adicionar Membro</span>
+        </button>
         <div className="bg-yellow-600/10 border border-yellow-600/20 rounded-xl p-6">
           <div className="flex items-center space-x-3">
             <AlertTriangle className="w-6 h-6 text-yellow-400" />
