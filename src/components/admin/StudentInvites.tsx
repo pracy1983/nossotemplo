@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Send, Copy, Check, AlertTriangle, UserCheck, X, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, Clock } from 'lucide-react';
+import { Mail, Send, Copy, Check, X, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
 import { generateId, validateEmail } from '../../utils/helpers';
@@ -63,11 +63,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const paginatedStudents = filteredInvites.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
 
-  // Get pending approvals
-  const pendingApprovals = students.filter(student => 
-    student.isPendingApproval && student.inviteStatus === 'accepted'
-  );
-  
   // Funções para seleção de estudantes
   const handleSelectAll = (students: Student[]) => {
     if (selectedStudents.size === students.length) {
@@ -450,21 +445,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
             <Plus className="w-4 h-4" />
             <span>Adicionar Membro</span>
           </button>
-          {pendingApprovals.length > 0 && (
-            <div className="bg-yellow-600/10 border border-yellow-600/20 rounded-xl p-6">
-              <div className="flex items-center space-x-3">
-                <AlertTriangle className="w-6 h-6 text-yellow-400" />
-                <div>
-                  <h3 className="text-yellow-400 font-semibold">
-                    {pendingApprovals.length} cadastro(s) aguardando aprovação
-                  </h3>
-                  <p className="text-yellow-300 text-sm">
-                    Há novos membros que completaram o cadastro e aguardam sua aprovação.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Banner de notificações removido conforme solicitado */}
         </div>
       </div>
 
@@ -514,50 +495,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         </div>
       </div>
 
-      {/* Pending Approvals Section */}
-      {pendingApprovals.length > 0 && (
-        <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
-          <h2 className="text-xl font-semibold text-white mb-6 flex items-center space-x-2">
-            <UserCheck className="w-6 h-6 text-green-400" />
-            <span>Aguardando Aprovação ({pendingApprovals.length})</span>
-          </h2>
-          
-          <div className="space-y-4">
-            {pendingApprovals.map(student => (
-              <div key={student.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-white">{student.fullName}</h3>
-                    <div className="text-sm text-gray-400 mt-1">
-                      <p>{student.email}</p>
-                      <p>Templo {student.unit} • {student.turma && `Turma: ${student.turma}`}</p>
-                      <p>Cadastro completado em: {formatDate(student.invitedAt)}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <button
-                      onClick={() => handleRejectStudent(student.id)}
-                      className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Rejeitar</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => handleApproveStudent(student.id)}
-                      className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>Aprovar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Seção de aprovações pendentes removida conforme solicitado */}
 
       {/* Invites List */}
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
@@ -681,12 +619,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                               <Check className="w-4 h-4" />
                             </button>
                           </>
-                        )}
-                        
-                        {student.inviteStatus === 'accepted' && student.isPendingApproval && (
-                          <span className="text-yellow-400">
-                            <Clock className="w-4 h-4" />
-                          </span>
                         )}
                       </div>
                     </td>
