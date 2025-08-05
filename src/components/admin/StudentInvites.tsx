@@ -230,7 +230,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         isAdmin: false,
         isGuest: false,
         role: 'student',
-        inviteStatus: 'pending',
+        inviteStatus: 'accepted',
         inviteToken,
         invitedAt: new Date().toISOString(),
         invitedBy: inviteForm.invitedBy,
