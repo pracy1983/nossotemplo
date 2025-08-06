@@ -508,21 +508,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
           {/* Botões de ação em massa */}
           {selectedStudents.size > 0 && (
             <div className="flex items-center space-x-3">
-              <button
-                onClick={handleBulkApprove}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors text-sm"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Aprovar ({selectedStudents.size})</span>
-              </button>
               
-              <button
-                onClick={handleBulkReject}
-                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg transition-colors text-sm"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Rejeitar ({selectedStudents.size})</span>
-              </button>
               
               <button
                 onClick={handleBulkSendEmails}
@@ -601,25 +587,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                           </button>
                         )}
                         
-                        {student.inviteStatus === 'accepted' && student.isPendingApproval && (
-                          <>
-                            <button
-                              onClick={() => handleRejectStudent(student.id!)}
-                              className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded-lg transition-colors"
-                              title="Rejeitar"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                            
-                            <button
-                              onClick={() => handleApproveStudent(student.id!)}
-                              className="p-1.5 bg-green-600/20 text-green-400 hover:bg-green-600/30 rounded-lg transition-colors"
-                              title="Aprovar"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
+                        
                       </div>
                     </td>
                   </tr>
