@@ -514,7 +514,7 @@ Equipe Nosso Templo`
       mappedStudent.role = 'student';
       mappedStudent.isActive = true;
       mappedStudent.attendance = [];
-      mappedStudent.isPendingApproval = true;
+      mappedStudent.isPendingApproval = false;
       
       // Garantir que campos obrigatórios sempre tenham valores
       if (!mappedStudent.unit) {

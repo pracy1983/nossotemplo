@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Users, 
-  UserPlus, 
   Calendar, 
   CheckSquare, 
   BarChart3, 
@@ -30,10 +29,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Painel Principal', icon: Home },
     { id: 'students', label: 'Lista de Membros', icon: Users },
-    { id: 'add-student', label: 'Adicionar Membro', icon: UserPlus },
     { 
       id: 'student-invites', 
-      label: 'Aprovar Membro', 
+      label: 'Gerenciar Membros', 
       icon: UserCheck,
       badge: pendingApprovals > 0 ? pendingApprovals : undefined
     },
@@ -64,8 +62,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
                   }`}
                 >
                   <div className="flex items-center space-x-3">
-                    <Icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap">{item.label}</span>
                   </div>
                   
                   {item.badge && (
