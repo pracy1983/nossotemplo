@@ -45,7 +45,7 @@ export const getAttendanceForDate = (attendance: AttendanceRecord[], date: strin
 };
 
 export const generateId = (): string => {
-  return Math.random().toString(36).substr(2, 9);
+  return crypto.randomUUID();
 };
 
 export const validateCPF = (cpf: string): boolean => {
