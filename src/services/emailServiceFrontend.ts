@@ -113,7 +113,7 @@ export const sendPasswordResetEmail = async (to: string, resetLink: string, name
 /**
  * Função para enviar convite para novos membros
  */
-export const sendInviteEmail = async (to: string, inviteLink: string, name: string): Promise<boolean> => {
+export const sendInviteEmail = async (to: string, inviteLink: string, name: string, tempPassword?: string): Promise<boolean> => {
   const subject = 'Convite - Nosso Templo';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -121,6 +121,8 @@ export const sendInviteEmail = async (to: string, inviteLink: string, name: stri
       <p>Olá ${name},</p>
       <p>Você foi convidado para participar do Nosso Templo. Para aceitar o convite, clique no link abaixo:</p>
       <p><a href="${inviteLink}" style="display: inline-block; background-color: #4a5568; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Aceitar Convite</a></p>
+      <p><strong>Sua senha temporária:</strong> <code>${tempPassword || '(gerada automaticamente)'}</code></p>
+      <p>Use esta senha para fazer login pela primeira vez e altere-a assim que acessar o sistema.</p>
       <p>Atenciosamente,<br>Equipe Nosso Templo</p>
     </div>
   `;

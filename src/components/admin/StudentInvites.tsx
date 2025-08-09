@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Send, Copy, Check, X, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
-import { generateId, validateEmail } from '../../utils/helpers';
+import { generateId, validateEmail, generateTempPassword } from '../../utils/helpers';
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
@@ -236,6 +236,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     try {
       const inviteToken = generateInviteToken();
       const inviteUrl = `${window.location.origin}/convite/${inviteToken}`;
+      const tempPassword = generateTempPassword();
 
       const newStudent: Student = {
         id: generateId(),
@@ -320,23 +321,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
       };
 
       await addStudent(newStudent);
-
-      // Set the generated link for display
-      setGeneratedLink(inviteUrl);
-      setShowLinkModal(true);
-
-      // Enviar email de convite usando o serviço de email com fallback para simulação
-      try {
-        await sendInviteEmail(inviteForm.email, inviteUrl, inviteForm.fullName);
-        toast.success(`Convite enviado com sucesso para ${inviteForm.email}`);
-      } catch (error) {
-        console.error('Erro ao enviar email de convite:', error);
-        toast.warning(`Convite gerado, mas houve um problema ao enviar o email para ${inviteForm.email}. O link foi salvo e pode ser copiado.`);
-      }
-
-      // Reset form
-      setInviteForm({
-        fullName: '',
         email: '',
         unit: temples.length > 0 ? temples[0].abbreviation : 'SP',
         turma: '',
