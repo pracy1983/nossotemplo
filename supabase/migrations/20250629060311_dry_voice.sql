@@ -154,23 +154,22 @@ CREATE INDEX IF NOT EXISTS idx_students_invite_token ON students(invite_token) W
 CREATE INDEX IF NOT EXISTS idx_students_pending_approval ON students(is_pending_approval) WHERE is_pending_approval = true;
 CREATE INDEX IF NOT EXISTS idx_students_invite_status ON students(invite_status) WHERE invite_status IS NOT NULL;
 
--- Função para gerar token único de convite
+-- Função para gerar token único de convite no formato UUID v4
 CREATE OR REPLACE FUNCTION generate_invite_token()
-RETURNS text
+RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  token text;
+  new_uuid uuid;
   exists_token boolean;
 BEGIN
   LOOP
-    -- Gerar token aleatório de 32 caracteres
-    token := encode(gen_random_bytes(24), 'base64');
-    token := replace(replace(replace(token, '/', '_'), '+', '-'), '=', '');
+    -- Gerar um novo UUID v4
+    new_uuid := gen_random_uuid();
     
     -- Verificar se o token já existe
-    SELECT EXISTS(SELECT 1 FROM students WHERE invite_token = token) INTO exists_token;
+    SELECT EXISTS(SELECT 1 FROM students WHERE invite_token = new_uuid) INTO exists_token;
     
     -- Se não existe, usar este token
     IF NOT exists_token THEN
@@ -178,12 +177,12 @@ BEGIN
     END IF;
   END LOOP;
   
-  RETURN token;
+  RETURN new_uuid;
 END;
 $$;
 
 -- Função para verificar se token de convite é válido
-CREATE OR REPLACE FUNCTION is_invite_token_valid(token text)
+CREATE OR REPLACE FUNCTION is_invite_token_valid(token uuid)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
