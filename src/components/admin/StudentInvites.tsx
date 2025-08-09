@@ -12,7 +12,8 @@ interface StudentInvitesProps {
 }
 
 const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent }) => {
-  const { students, temples, addStudent } = useData();
+  const { students: initialStudents, temples, addStudent, deleteStudent } = useData();
+  const [students, setStudents] = useState<Student[]>(initialStudents);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'accepted' | 'expired'>('all');
@@ -59,6 +60,11 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
       document.removeEventListener('mousedown', handleClick);
     };
   }, [actionMenuOpenId]);
+
+  // Update local state when initialStudents changes
+  useEffect(() => {
+    setStudents(initialStudents);
+  }, [initialStudents]);
 
   // Get students with invite information
   const invitedStudents = students.filter(student => 
@@ -638,11 +644,20 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                                 Editar
                               </button>
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
                                   setActionMenuOpenId(null);
-                                  if (confirm('Tem certeza que deseja apagar este membro?')) {
-                                    alert('Membro apagado');
+                                  if (confirm(`Tem certeza que deseja apagar o membro ${student.fullName}?`)) {
+                                    try {
+                                      await deleteStudent(student.id!);
+                                      toast.success('Membro apagado com sucesso');
+                                      // Atualiza a lista de estudantes após a exclusão
+                                      const updatedStudents = students.filter(s => s.id !== student.id);
+                                      setStudents(updatedStudents);
+                                    } catch (error) {
+                                      console.error('Erro ao apagar membro:', error);
+                                      toast.error('Erro ao apagar membro');
+                                    }
                                   }
                                 }}
                                 className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-800"
