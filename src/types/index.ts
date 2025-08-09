@@ -46,6 +46,7 @@ export interface Student {
   // Social media fields
   instagramPersonal?: string; // Instagram Pessoal
   instagramMagicko?: string; // Instagram Mágicko
+  tempPassword?: string; // Senha temporária para primeiro acesso
 }
 
 export interface Event {

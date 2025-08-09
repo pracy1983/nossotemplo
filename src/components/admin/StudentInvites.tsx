@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Send, Copy, Check, X, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle } from 'lucide-react';
+import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { InviteData, Student } from '../../types';
 import { generateId, validateEmail, generateTempPassword } from '../../utils/helpers';
@@ -164,7 +164,9 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         const inviteUrl = `${window.location.origin}/convite/${student.inviteToken}`;
         
         try {
-          await sendInviteEmail(student.email, inviteUrl, student.fullName);
+          // Usar a senha temporária existente ou gerar uma nova se não existir
+          const tempPassword = student.tempPassword || generateTempPassword();
+          await sendInviteEmail(student.email, inviteUrl, student.fullName, tempPassword);
           successCount++;
         } catch (error) {
           console.error(`Erro ao enviar email para ${student.email}:`, error);
@@ -259,7 +261,8 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         inviteToken,
         invitedAt: new Date().toISOString(),
         invitedBy: inviteForm.invitedBy,
-        isPendingApproval: false
+        isPendingApproval: false,
+        tempPassword: tempPassword
       };
 
       await addStudent(newStudent);
@@ -295,6 +298,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     try {
       const inviteToken = generateInviteToken();
       const inviteUrl = `${window.location.origin}/convite/${inviteToken}`;
+      const tempPassword = generateTempPassword();
 
       const newStudent: Student = {
         id: generateId(),
@@ -317,10 +321,18 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         inviteToken,
         invitedAt: new Date().toISOString(),
         invitedBy: inviteForm.invitedBy,
-        isPendingApproval: false
+        isPendingApproval: false,
+        tempPassword: tempPassword
       };
 
       await addStudent(newStudent);
+      
+      // Enviar email com a senha temporária
+      await sendInviteEmail(inviteForm.email, inviteUrl, inviteForm.fullName, tempPassword);
+      
+      // Reset form
+      setInviteForm({
+        fullName: '',
         email: '',
         unit: temples.length > 0 ? temples[0].abbreviation : 'SP',
         turma: '',

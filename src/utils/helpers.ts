@@ -97,8 +97,6 @@ export const formatCPF = (cpf: string): string => {
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 };
 
-export const formatPhone = (phone: string): string => {
-
 // Gera uma senha temporária segura de 10 caracteres alfanuméricos
 export const generateTempPassword = (length = 10): string => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
@@ -110,9 +108,12 @@ export const generateTempPassword = (length = 10): string => {
   return password;
 };
 
+export const formatPhone = (phone: string): string => {
   phone = phone.replace(/\D/g, '');
   if (phone.length === 11) {
     return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  } else if (phone.length === 10) {
+    return phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
   }
-  return phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  return phone;
 };

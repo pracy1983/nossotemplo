@@ -62,6 +62,7 @@ interface DatabaseAttendanceRecord {
 }
 import { Student, Event, AttendanceRecord, User, Temple, InviteData, StudentRegistrationData, Turma, Aula } from '../types';
 import { EVENT_TYPES } from '../utils/constants';
+import { generateTempPassword } from '../utils/helpers';
 // Importar apenas o serviço de email frontend
 import { sendInviteEmail } from './emailServiceFrontend';
 
@@ -120,46 +121,50 @@ const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent>
   const dbData: Partial<DatabaseStudent> = {};
 
   if (student.id !== undefined) dbData.id = student.id;
-  if (student.photo !== undefined) dbData.photo = student.photo || null;
-  if (student.fullName !== undefined) dbData.full_name = student.fullName === '' ? null : student.fullName;
-  if (student.birthDate !== undefined) dbData.birth_date = student.birthDate === '' ? null : student.birthDate;
-  if (student.cpf !== undefined) dbData.cpf = student.cpf === '' ? null : student.cpf;
-  if (student.rg !== undefined) dbData.rg = student.rg === '' ? null : student.rg;
-  if (student.email !== undefined) dbData.email = student.email === '' ? null : student.email;
-  if (student.phone !== undefined) dbData.phone = student.phone === '' ? null : student.phone;
-  if (student.religion !== undefined) dbData.religion = student.religion === '' ? null : student.religion;
+  if (student.photo !== undefined) dbData.photo = student.photo || undefined;
+  if (student.fullName !== undefined) dbData.full_name = student.fullName === '' ? undefined : student.fullName;
+  if (student.birthDate !== undefined) dbData.birth_date = student.birthDate === '' ? undefined : student.birthDate;
+  if (student.cpf !== undefined) dbData.cpf = student.cpf === '' ? undefined : student.cpf;
+  if (student.rg !== undefined) dbData.rg = student.rg === '' ? undefined : student.rg;
+  if (student.email !== undefined) dbData.email = student.email === '' ? undefined : student.email;
+  if (student.phone !== undefined) dbData.phone = student.phone === '' ? undefined : student.phone;
+  if (student.religion !== undefined) dbData.religion = student.religion === '' ? undefined : student.religion;
   if (student.unit !== undefined) {
     // Garantir que unit seja um dos valores válidos
     const validUnits = ['SP', 'BH', 'CP'] as const;
-    dbData.unit = validUnits.includes(student.unit as any) ? student.unit : 'SP';
+    const unitValue = validUnits.includes(student.unit as any) ? student.unit : 'SP';
+    dbData.unit = unitValue as 'SP' | 'BH' | 'CP';
   }
-  if (student.developmentStartDate !== undefined) dbData.development_start_date = student.developmentStartDate === '' ? null : student.developmentStartDate;
-  if (student.internshipStartDate !== undefined) dbData.internship_start_date = student.internshipStartDate === '' ? null : student.internshipStartDate;
-  if (student.magistInitiationDate !== undefined) dbData.magist_initiation_date = student.magistInitiationDate === '' ? null : student.magistInitiationDate;
-  if (student.notEntryDate !== undefined) dbData.not_entry_date = student.notEntryDate === '' ? null : student.notEntryDate;
-  if (student.masterMagusInitiationDate !== undefined) dbData.master_magus_initiation_date = student.masterMagusInitiationDate === '' ? null : student.masterMagusInitiationDate;
+  if (student.developmentStartDate !== undefined) dbData.development_start_date = student.developmentStartDate === '' ? undefined : student.developmentStartDate;
+  if (student.internshipStartDate !== undefined) dbData.internship_start_date = student.internshipStartDate === '' ? undefined : student.internshipStartDate;
+  if (student.magistInitiationDate !== undefined) dbData.magist_initiation_date = student.magistInitiationDate === '' ? undefined : student.magistInitiationDate;
+  if (student.notEntryDate !== undefined) dbData.not_entry_date = student.notEntryDate === '' ? undefined : student.notEntryDate;
+  if (student.masterMagusInitiationDate !== undefined) dbData.master_magus_initiation_date = student.masterMagusInitiationDate === '' ? undefined : student.masterMagusInitiationDate;
   if (student.isFounder !== undefined) dbData.is_founder = student.isFounder;
   if (student.isActive !== undefined) dbData.is_active = student.isActive;
-  if (student.inactiveSince !== undefined) dbData.inactive_since = student.inactiveSince === '' ? null : student.inactiveSince;
-  if (student.lastActivity !== undefined) dbData.last_activity = student.lastActivity === '' ? null : student.lastActivity;
+  if (student.inactiveSince !== undefined) {
+    // Converter string vazia para null para manter consistência com o tipo da interface
+    dbData.inactive_since = student.inactiveSince === '' ? null : student.inactiveSince;
+  }
+  if (student.lastActivity !== undefined) dbData.last_activity = student.lastActivity === '' ? undefined : student.lastActivity;
   if (student.isAdmin !== undefined) dbData.is_admin = student.isAdmin;
   if (student.isGuest !== undefined) dbData.is_guest = student.isGuest;
   // Address fields
-  if (student.street !== undefined) dbData.street = student.street === '' ? null : student.street;
-  if (student.number !== undefined) dbData.number = student.number === '' ? null : student.number;
-  if (student.complement !== undefined) dbData.complement = student.complement === '' ? null : student.complement;
-  if (student.neighborhood !== undefined) dbData.neighborhood = student.neighborhood === '' ? null : student.neighborhood;
-  if (student.zipCode !== undefined) dbData.zip_code = student.zipCode === '' ? null : student.zipCode;
-  if (student.city !== undefined) dbData.city = student.city === '' ? null : student.city;
-  if (student.state !== undefined) dbData.state = student.state === '' ? null : student.state;
+  if (student.street !== undefined) dbData.street = student.street === '' ? undefined : student.street;
+  if (student.number !== undefined) dbData.number = student.number === '' ? undefined : student.number;
+  if (student.complement !== undefined) dbData.complement = student.complement === '' ? undefined : student.complement;
+  if (student.neighborhood !== undefined) dbData.neighborhood = student.neighborhood === '' ? undefined : student.neighborhood;
+  if (student.zipCode !== undefined) dbData.zip_code = student.zipCode === '' ? undefined : student.zipCode;
+  if (student.city !== undefined) dbData.city = student.city === '' ? undefined : student.city;
+  if (student.state !== undefined) dbData.state = student.state === '' ? undefined : student.state;
   // Group/Class field
-  if (student.turma !== undefined) dbData.turma = student.turma === '' ? null : student.turma;
+  if (student.turma !== undefined) dbData.turma = student.turma === '' ? undefined : student.turma;
   // Invite and approval fields
   if (student.isPendingApproval !== undefined) dbData.is_pending_approval = student.isPendingApproval;
   if (student.inviteStatus !== undefined) dbData.invite_status = student.inviteStatus;
-  if (student.inviteToken !== undefined) dbData.invite_token = student.inviteToken === '' ? null : student.inviteToken;
-  if (student.invitedAt !== undefined) dbData.invited_at = student.invitedAt === '' ? null : student.invitedAt;
-  if (student.invitedBy !== undefined) dbData.invited_by = student.invitedBy === '' ? null : student.invitedBy;
+  if (student.inviteToken !== undefined) dbData.invite_token = student.inviteToken === '' ? undefined : student.inviteToken;
+  if (student.invitedAt !== undefined) dbData.invited_at = student.invitedAt === '' ? undefined : student.invitedAt;
+  if (student.invitedBy !== undefined) dbData.invited_by = student.invitedBy === '' ? undefined : student.invitedBy;
   return dbData;
 };
 
@@ -167,7 +172,8 @@ const dbEventToEvent = (dbEvent: DatabaseEvent): Event => {
   // Definir valores padrão para temple e color caso não sejam válidos
   const validUnits = ['SP', 'BH', 'CP'] as const;
   const unitValue = dbEvent.unit || 'SP';
-  const unit = validUnits.includes(unitValue as any) ? unitValue as 'SP' | 'BH' | 'CP' : 'SP';
+  // Converter para string simples, já que a interface Event espera string para unit
+  const unit = validUnits.includes(unitValue as any) ? unitValue : 'SP';
 
   // Definir valores padrão para os campos de evento
   let eventType: keyof typeof EVENT_TYPES = 'outro';
@@ -204,9 +210,17 @@ const eventToDbEvent = (event: Partial<Event>): Partial<DatabaseEvent> => {
   if (event.title !== undefined) dbData.title = event.title;
   if (event.date !== undefined) dbData.date = event.date;
   if (event.time !== undefined) dbData.time = event.time;
-  if (event.description !== undefined) dbData.description = event.description || null;
+  if (event.description !== undefined) {
+    // Se description for string vazia, define como undefined para manter consistência com o tipo
+    dbData.description = event.description === '' ? undefined : event.description;
+  }
   if (event.location !== undefined) dbData.location = event.location;
-  if (event.unit !== undefined) dbData.unit = event.unit;
+  if (event.unit !== undefined) {
+    // Garantir que a unidade seja um dos valores válidos
+    const validUnits = ['SP', 'BH', 'CP'] as const;
+    const unitValue = event.unit || 'SP';
+    dbData.unit = validUnits.includes(unitValue as any) ? unitValue as 'SP' | 'BH' | 'CP' : 'SP';
+  }
   return dbData;
 };
 
@@ -636,6 +650,9 @@ export const sendStudentInvite = async (inviteData: InviteData): Promise<string>
 
     const inviteToken = tokenData;
 
+    // Gerar senha temporária
+    const tempPassword = generateTempPassword();
+    
     // Create student record with invite information
     const studentData: Partial<Student> = {
       fullName: inviteData.fullName,
@@ -657,7 +674,8 @@ export const sendStudentInvite = async (inviteData: InviteData): Promise<string>
       inviteToken,
       invitedAt: new Date().toISOString(),
       invitedBy: inviteData.invitedBy,
-      isPendingApproval: false
+      isPendingApproval: false,
+      tempPassword: tempPassword
     };
 
     await createStudent(studentData as Student);
@@ -667,7 +685,7 @@ export const sendStudentInvite = async (inviteData: InviteData): Promise<string>
     
     try {
       // Tentar enviar email real
-      await sendInviteEmail(inviteData.email, inviteUrl, inviteData.fullName);
+      await sendInviteEmail(inviteData.email, inviteUrl, inviteData.fullName, tempPassword);
       console.log(`Email de convite enviado com sucesso para ${inviteData.email}`);
     } catch (emailError) {
       // Em caso de erro, usar a simulação de email

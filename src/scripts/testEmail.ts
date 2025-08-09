@@ -29,7 +29,8 @@ async function testEmail() {
     await sendInviteEmail(
       'pracy1983@gmail.com',
       `${SITE_CONFIG.BASE_URL}${SITE_CONFIG.ROUTES.INVITE}/123456`,
-      'Usuário Convidado'
+      'Usuário Convidado',
+      'senhatemporaria123' // Senha temporária de exemplo para teste
     );
     console.log('✓ Email de convite enviado com sucesso!');
 
