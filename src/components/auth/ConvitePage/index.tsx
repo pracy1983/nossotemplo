@@ -99,38 +99,37 @@ const ConvitePage: React.FC = () => {
         throw new Error('Não foi possível encontrar o usuário associado a este convite.');
       }
 
-      // Verificar se o usuário já existe no sistema de autenticação
-      let userExists = false;
-
-      try {
-        const { error: authCheckError } = await supabase.auth.signInWithPassword({
-          email: userData.email,
-          password: 'placeholder-password-that-will-fail'
-        });
-        userExists = authCheckError && authCheckError.message.includes('Invalid login credentials');
-      } catch (error) {
-        console.log('Erro ao verificar existência do usuário:', error);
-        userExists = false;
+      // Criar (ou confirmar existência) do usuário no Auth usando a senha temporária
+      // Estratégia: tentar signUp. Se já existir, o Supabase retorna erro específico e seguimos como "existente".
+      let userCreatedOrExists = false;
+      if (!userData.temp_password) {
+        throw new Error('Senha temporária não encontrada para este convite.');
       }
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.temp_password
+      });
 
-      // Se o usuário não existe, criar no Auth com senha temporária
-      if (!userExists) {
-        if (!userData.temp_password) {
-          throw new Error('Senha temporária não encontrada para este convite.');
-        }
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: userData.email,
-          password: userData.temp_password
-        });
-        if (signUpError) {
+      if (!signUpError) {
+        userCreatedOrExists = true; // criado agora
+      } else {
+        // Se usuário já está registrado, tratar como existente e seguir fluxo normal
+        const msg = (signUpError.message || '').toLowerCase();
+        const code = (signUpError as any).code || '';
+        if (msg.includes('already registered') || msg.includes('user already registered') || code === 'user_already_registered') {
+          userCreatedOrExists = true;
+        } else {
           throw new Error('Erro ao criar usuário Auth: ' + signUpError.message);
         }
-        // Atualizar status do convite para 'accepted'
+      }
+
+      if (userCreatedOrExists) {
+        // Atualizar status do convite para 'accepted' e redirecionar para login
         await supabase
           .from('students')
           .update({ invite_status: 'accepted', updated_at: new Date().toISOString() })
           .eq('invite_token', token);
-        toast.success('Conta criada! Use a senha temporária recebida por e-mail para acessar e troque sua senha no primeiro acesso.');
+        toast.success('Convite aceito! Você já pode fazer login com a senha temporária.');
         setTimeout(() => {
           navigate('/login?email=' + encodeURIComponent(userData.email));
         }, 2000);
