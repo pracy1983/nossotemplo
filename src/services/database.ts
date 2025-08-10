@@ -38,6 +38,7 @@ interface DatabaseStudent {
   invite_token?: string;
   invited_at?: string;
   invited_by?: string;
+  temp_password?: string;
 }
 
 interface DatabaseEvent {
@@ -165,6 +166,8 @@ const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent>
   if (student.inviteToken !== undefined) dbData.invite_token = student.inviteToken === '' ? undefined : student.inviteToken;
   if (student.invitedAt !== undefined) dbData.invited_at = student.invitedAt === '' ? undefined : student.invitedAt;
   if (student.invitedBy !== undefined) dbData.invited_by = student.invitedBy === '' ? undefined : student.invitedBy;
+  // Senha temporária (usada apenas para primeiro acesso)
+  if (student.tempPassword !== undefined) dbData.temp_password = student.tempPassword === '' ? undefined : student.tempPassword;
   return dbData;
 };
 
