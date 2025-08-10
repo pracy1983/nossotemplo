@@ -88,54 +88,55 @@ const ConvitePage: React.FC = () => {
     try {
       const supabase = await supabaseManager.getClient();
       
-      // Primeiro, buscar o email do usuário associado ao token
+      // Buscar email E senha temporária do usuário associado ao token
       const { data: userData, error: userError } = await supabase
         .from('students')
-        .select('email')
+        .select('email, temp_password')
         .eq('invite_token', token)
         .single();
-      
+
       if (userError || !userData) {
         throw new Error('Não foi possível encontrar o usuário associado a este convite.');
       }
-      
+
       // Verificar se o usuário já existe no sistema de autenticação
-      // Tentamos uma abordagem mais segura usando o método getUser
       let userExists = false;
-      
+
       try {
-        // Primeiro, tentamos verificar se o usuário existe usando o método signInWithPassword
-        // Se o erro contém "Invalid login credentials", significa que o usuário existe
         const { error: authCheckError } = await supabase.auth.signInWithPassword({
           email: userData.email,
           password: 'placeholder-password-that-will-fail'
         });
-        
         userExists = authCheckError && authCheckError.message.includes('Invalid login credentials');
       } catch (error) {
         console.log('Erro ao verificar existência do usuário:', error);
-        // Se houver erro na verificação, assumimos que o usuário não existe
         userExists = false;
       }
-      
-      // Se o usuário não existe, precisamos criar um novo usuário no sistema de autenticação
+
+      // Se o usuário não existe, criar no Auth com senha temporária
       if (!userExists) {
-        // Redirecionar para uma página de registro com o email pré-preenchido
-        // e um token especial que indica que é um convite aceito
-        toast.info('Você será redirecionado para criar sua conta.');
-        
-        // Armazenar o email na sessionStorage para uso na página de registro
-        sessionStorage.setItem('inviteEmail', userData.email || '');
-        sessionStorage.setItem('inviteToken', token || '');
-        
-        // Redirecionar para a página de registro após um breve delay
+        if (!userData.temp_password) {
+          throw new Error('Senha temporária não encontrada para este convite.');
+        }
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: userData.email,
+          password: userData.temp_password
+        });
+        if (signUpError) {
+          throw new Error('Erro ao criar usuário Auth: ' + signUpError.message);
+        }
+        // Atualizar status do convite para 'accepted'
+        await supabase
+          .from('students')
+          .update({ invite_status: 'accepted', updated_at: new Date().toISOString() })
+          .eq('invite_token', token);
+        toast.success('Conta criada! Use a senha temporária recebida por e-mail para acessar e troque sua senha no primeiro acesso.');
         setTimeout(() => {
-          navigate('/register?fromInvite=true');
+          navigate('/login?email=' + encodeURIComponent(userData.email));
         }, 2000);
-        
         return;
       }
-      
+
       // Se o usuário já existe, podemos usar o fluxo de redefinição de senha
       // Atualizar o status do convite para 'accepted'
       const { error: updateError } = await supabase
