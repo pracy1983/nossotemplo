@@ -6,6 +6,7 @@ import { generateId, validateEmail, generateTempPassword } from '../../utils/hel
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
+import { createPortal } from 'react-dom';
 
 interface StudentInvitesProps {
   onNavigateToAddStudent?: () => void;
@@ -44,6 +45,9 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const [errors, setErrors] = useState<Record<string, string>>({});
   // Estado para controlar menu de ações aberto
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
+  // Posição do menu overlay
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+
   // Fecha menu ao clicar fora
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -86,6 +90,9 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const paginatedStudents = filteredInvites.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
+
+  // Student ativo para o menu de ações
+  const currentActionStudent = students.find(s => s.id === actionMenuOpenId);
 
   // Funções para seleção de estudantes
   const handleSelectAll = (students: Student[]) => {
@@ -617,7 +624,17 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActionMenuOpenId(actionMenuOpenId === student.id ? null : student.id!);
+                              const willOpen = actionMenuOpenId !== student.id;
+                              setActionMenuOpenId(willOpen ? student.id! : null);
+                              if (willOpen) {
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                const menuWidth = 160; // w-40
+                                const left = Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8);
+                                const top = rect.bottom + 8;
+                                setMenuPos({ top, left });
+                              } else {
+                                setMenuPos(null);
+                              }
                             }}
                             className="p-1.5 bg-gray-700/30 text-gray-400 hover:bg-gray-600/50 rounded-lg transition-colors"
                             title="Ações"
@@ -630,7 +647,13 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                           </button>
                           
                           {actionMenuOpenId === student.id && (
-                            <div className="absolute right-0 mt-2 w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50">
+                            <div
+                              style={{
+                                top: menuPos?.top,
+                                left: menuPos?.left,
+                              }}
+                              className="absolute bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50 w-40"
+                            >
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -897,6 +920,81 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
           </div>
         </form>
       </Modal>
+      {actionMenuOpenId && menuPos && currentActionStudent && createPortal(
+        <>
+          {/* Backdrop para fechar ao clicar fora */}
+          <div
+            className="fixed inset-0 z-[99]"
+            onMouseDown={() => {
+              setActionMenuOpenId(null);
+              setMenuPos(null);
+            }}
+          />
+          {/* Wrapper com class relative para coexistir com o listener existente */}
+          <div className="relative">
+            <div
+              className="fixed z-[100] w-40 bg-gray-900 border border-gray-700 rounded-lg shadow-lg"
+              style={{ top: menuPos.top, left: menuPos.left }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActionMenuOpenId(null);
+                  setMenuPos(null);
+                  alert('Editar membro');
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-200 hover:bg-gray-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setActionMenuOpenId(null);
+                  setMenuPos(null);
+                  if (confirm(`Tem certeza que deseja apagar o membro ${currentActionStudent.fullName}?`)) {
+                    try {
+                      await deleteStudent(currentActionStudent.id!);
+                      toast.success('Membro apagado com sucesso');
+                      // Atualiza a lista de estudantes após a exclusão
+                      const updatedStudents = students.filter(s => s.id !== currentActionStudent.id);
+                      setStudents(updatedStudents);
+                    } catch (error) {
+                      console.error('Erro ao apagar membro:', error);
+                      toast.error('Erro ao apagar membro');
+                    }
+                  }
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-gray-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Apagar
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActionMenuOpenId(null);
+                  setMenuPos(null);
+                  alert('Enviando e-mail para ' + currentActionStudent.email);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-blue-400 hover:bg-gray-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Enviar E-mail
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
 
       {/* Modal para envio de e-mails em massa */}
       <Modal
