@@ -1,22 +1,4 @@
 import { supabase, supabaseManager } from '../lib/supabaseClient';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-
-// Cliente de administração do Supabase para operações privilegiadas (somente se houver chave de serviço)
-const __ADMIN_URL__ = (import.meta as any)?.env?.VITE_SUPABASE_URL as string | undefined;
-const __SERVICE_KEY__ = (import.meta as any)?.env?.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
-let supabaseAdmin: SupabaseClient | null = null;
-if (__ADMIN_URL__ && __SERVICE_KEY__) {
-  supabaseAdmin = createClient(
-    __ADMIN_URL__,
-    __SERVICE_KEY__,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
-}
 
 // Interfaces para tipos do banco de dados
 interface DatabaseStudent {
@@ -664,40 +646,22 @@ export const deleteStudent = async (id: string): Promise<void> => {
       throw new Error(`Erro ao excluir aluno: ${deleteError.message}`);
     }
 
-    // Se encontrou o email, tentar excluir o usuário do Auth
+    // Se encontrou o email, tentar excluir o usuário do Auth via Netlify Function
     if (student?.email) {
       try {
-        // Se não houver cliente admin (sem service role no ambiente), não tenta excluir no Auth
-        if (!supabaseAdmin) {
-          console.warn('SUPABASE_SERVICE_ROLE_KEY ausente. Pular exclusão no Auth e manter apenas remoção em students.');
-          return;
-        }
-        // Primeiro, buscar o ID do usuário pelo email
-        const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+        const response = await fetch('/.netlify/functions/delete-auth-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: student.email }),
+        });
 
-        if (userError) {
-          console.error('Erro ao buscar usuário na autenticação:', userError);
-          // Não lançamos erro aqui para não reverter a exclusão do aluno
+        if (!response.ok) {
           console.warn(`Usuário ${student.email} excluído da tabela students, mas não foi possível excluir da autenticação.`);
-          return;
-        }
-
-        // Filtrar o usuário pelo email e excluir
-        if (users && users.length > 0) {
-          const userToDelete = users.find(user => user.email === student.email);
-          
-          if (userToDelete) {
-            const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
-            
-            if (deleteAuthError) {
-              console.error('Erro ao excluir usuário da autenticação:', deleteAuthError);
-              console.warn(`Usuário ${student.email} excluído da tabela students, mas não foi possível excluir da autenticação.`);
-            } else {
-              console.log(`Usuário ${student.email} excluído com sucesso da autenticação.`);
-            }
-          } else {
-            console.log(`Usuário com email ${student.email} não encontrado na autenticação.`);
-          }
+        } else {
+          const result = await response.json();
+          console.log(`Usuário ${student.email} excluído com sucesso da autenticação.`);
         }
       } catch (authError) {
         console.error('Erro ao excluir usuário da autenticação:', authError);
