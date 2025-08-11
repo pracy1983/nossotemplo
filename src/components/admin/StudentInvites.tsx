@@ -47,6 +47,16 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const [actionMenuOpenId, setActionMenuOpenId] = useState<string | null>(null);
   // Posição do menu overlay
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  // Estado para controlar modal de perfil
+  const [selectedProfileStudent, setSelectedProfileStudent] = useState<Student | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
+  // Estados para edição de perfil
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [formData, setFormData] = useState<Student | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [photo, setPhoto] = useState<string>('');
 
   // Fecha menu ao clicar fora
   useEffect(() => {
@@ -879,7 +889,29 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                   e.stopPropagation();
                   setActionMenuOpenId(null);
                   setMenuPos(null);
-                  alert('Editar membro');
+                  setSelectedProfileStudent(currentActionStudent);
+                  setIsProfileModalOpen(true);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-gray-200 hover:bg-gray-800"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Ver Perfil
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setActionMenuOpenId(null);
+                  setMenuPos(null);
+                  
+                  // Abrir modal de perfil em modo de edição
+                  setSelectedProfileStudent(currentActionStudent);
+                  setEditingStudent(currentActionStudent);
+                  setFormData({...currentActionStudent});
+                  setPhoto(currentActionStudent.photo || '');
+                  setIsEditing(true);
+                  setIsProfileModalOpen(true);
                 }}
                 className="flex items-center w-full px-4 py-2 text-sm text-gray-200 hover:bg-gray-800"
               >
@@ -1088,6 +1120,398 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal de Perfil do Membro */}
+      <Modal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedProfileStudent(null);
+          setIsEditing(false);
+          setEditingStudent(null);
+          setFormData(null);
+        }}
+        title={isEditing ? 'Editar Perfil' : 'Perfil do Usuário'}
+        size="xl"
+      >
+        {selectedProfileStudent && (
+          <div className="space-y-6">
+            {/* Header with Role and Actions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${selectedProfileStudent.isActive ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}`}>
+                  {selectedProfileStudent.isActive ? 'Ativo' : 'Inativo'}
+                </div>
+                
+                {selectedProfileStudent.unit && (
+                  <div className="bg-blue-600/20 text-blue-400 text-sm px-3 py-1 rounded-full">
+                    Templo {selectedProfileStudent.unit}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                {!isEditing ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsProfileModalOpen(false);
+                        setSelectedProfileStudent(null);
+                        setIsEditing(false);
+                      }}
+                      className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>Fechar</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Iniciar modo de edição no mesmo modal
+                        if (selectedProfileStudent) {
+                          setIsEditing(true);
+                          setEditingStudent(selectedProfileStudent);
+                          setFormData({...selectedProfileStudent});
+                          setPhoto(selectedProfileStudent.photo || '');
+                        }
+                      }}
+                      className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Editar</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={async () => {
+                        if (formData) {
+                          setIsSaving(true);
+                          try {
+                            // Atualizar o estudante com os novos dados
+                            const updatedStudent = {
+                              ...formData,
+                              photo: photo || formData.photo
+                            };
+                            
+                            // Salvar no banco de dados
+                            await addStudent(updatedStudent);
+                            
+                            // Atualizar a lista local
+                            const updatedStudents = students.map(s => 
+                              s.id === updatedStudent.id ? updatedStudent : s
+                            );
+                            setStudents(updatedStudents);
+                            
+                            // Atualizar o estudante selecionado
+                            setSelectedProfileStudent(updatedStudent);
+                            
+                            // Sair do modo de edição
+                            setIsEditing(false);
+                            setEditingStudent(null);
+                            
+                            // Notificar sucesso
+                            toast.success('Perfil atualizado com sucesso!');
+                          } catch (error) {
+                            console.error('Erro ao salvar perfil:', error);
+                            toast.error('Erro ao salvar perfil');
+                          } finally {
+                            setIsSaving(false);
+                          }
+                        }
+                      }}
+                      disabled={isSaving}
+                      className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData(selectedProfileStudent);
+                        setPhoto(selectedProfileStudent.photo || '');
+                        setErrors({});
+                      }}
+                      className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>Cancelar</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Photo Section */}
+              <div className="lg:col-span-1">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <img
+                      src={isEditing ? (photo || selectedProfileStudent.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop') : (selectedProfileStudent.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop')}
+                      alt={selectedProfileStudent.fullName}
+                      className="w-full h-80 object-cover rounded-lg"
+                    />
+                    {isEditing && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                        <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors">
+                          <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Alterar Foto
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setPhoto(reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Information Section */}
+              <div className="lg:col-span-2 space-y-6">
+                {!isEditing ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Nome Completo</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.fullName}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Email</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.email}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Telefone</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.phone || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Nascimento</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.birthDate || 'Não informada'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Templo</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.unit || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Turma</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.turma || 'Não informada'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Status do Convite</h3>
+                        <p className="text-lg font-medium text-white">
+                          {selectedProfileStudent.inviteStatus === 'pending' && 'Pendente'}
+                          {selectedProfileStudent.inviteStatus === 'accepted' && 'Aceito'}
+                          {selectedProfileStudent.inviteStatus === 'expired' && 'Expirado'}
+                          {!selectedProfileStudent.inviteStatus && 'Não aplicável'}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Registro</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.invitedAt || 'Não informada'}</p>
+                      </div>
+                    </div>
+                    
+                    {(selectedProfileStudent.street || selectedProfileStudent.city) && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Endereço</h3>
+                        <p className="text-lg font-medium text-white">
+                          {[selectedProfileStudent.street, 
+                            selectedProfileStudent.number && `Nº ${selectedProfileStudent.number}`,
+                            selectedProfileStudent.complement,
+                            selectedProfileStudent.neighborhood,
+                            selectedProfileStudent.city && selectedProfileStudent.state && `${selectedProfileStudent.city} - ${selectedProfileStudent.state}`,
+                            selectedProfileStudent.zipCode
+                          ].filter(Boolean).join(', ')}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {selectedProfileStudent.howFoundTemple && (
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Como conheceu o templo</h3>
+                        <p className="text-white">{selectedProfileStudent.howFoundTemple}</p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Formulário de edição */}
+                    {formData && (
+                      <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Nome Completo</label>
+                            <input
+                              type="text"
+                              value={formData.fullName}
+                              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                            <input
+                              type="email"
+                              value={formData.email}
+                              onChange={(e) => setFormData({...formData, email: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Telefone</label>
+                            <input
+                              type="tel"
+                              value={formData.phone || ''}
+                              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Data de Nascimento</label>
+                            <input
+                              type="date"
+                              value={formData.birthDate || ''}
+                              onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Templo</label>
+                            <select
+                              value={formData.unit || ''}
+                              onChange={(e) => setFormData({...formData, unit: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              {temples.map(temple => (
+                                <option key={temple.id} value={temple.abbreviation}>{temple.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Turma</label>
+                            <input
+                              type="text"
+                              value={formData.turma || ''}
+                              onChange={(e) => setFormData({...formData, turma: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Rua</label>
+                            <input
+                              type="text"
+                              value={formData.street || ''}
+                              onChange={(e) => setFormData({...formData, street: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Número</label>
+                            <input
+                              type="text"
+                              value={formData.number || ''}
+                              onChange={(e) => setFormData({...formData, number: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Complemento</label>
+                            <input
+                              type="text"
+                              value={formData.complement || ''}
+                              onChange={(e) => setFormData({...formData, complement: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Bairro</label>
+                            <input
+                              type="text"
+                              value={formData.neighborhood || ''}
+                              onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Cidade</label>
+                            <input
+                              type="text"
+                              value={formData.city || ''}
+                              onChange={(e) => setFormData({...formData, city: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">Estado</label>
+                            <input
+                              type="text"
+                              value={formData.state || ''}
+                              onChange={(e) => setFormData({...formData, state: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-400 mb-1">CEP</label>
+                            <input
+                              type="text"
+                              value={formData.zipCode || ''}
+                              onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
