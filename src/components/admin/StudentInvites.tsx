@@ -4,7 +4,7 @@ import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight,
 import { useData } from '../../contexts/DataContext';
 import { Student } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
-import { validateEmail, generateId, generateTempPassword } from '../../utils/helpers';
+import { validateEmail, formatCPF, formatPhone, formatDate, generateId, generateTempPassword } from '../../utils/helpers';
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
@@ -1334,6 +1334,23 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     </div>
 
                     <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Data de Nascimento</label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.birthDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, birthDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.birthDate ? formatDate(selectedProfileStudent.birthDate) : 'Não informado'}
+                        </p>
+                      )}
+                      {profileErrors.birthDate && <p className="text-red-400 text-sm mt-1">{profileErrors.birthDate}</p>}
+                    </div>
+
+                    <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">Templo</label>
                       {isEditing ? (
                         <select
@@ -1360,6 +1377,50 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                             `Templo ${selectedProfileStudent.unit} - ${DEFAULT_TEMPLES[selectedProfileStudent.unit as keyof typeof DEFAULT_TEMPLES] || selectedProfileStudent.unit}` : 
                             'Não informado'}
                         </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CPF</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.cpf || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, cpf: formatCPF(e.target.value) }) : null)}
+                          placeholder="000.000.000-00"
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.cpf || 'Não informado'}</p>
+                      )}
+                      {profileErrors.cpf && <p className="text-red-400 text-sm mt-1">{profileErrors.cpf}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">RG</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.rg || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, rg: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.rg || 'Não informado'}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Religião</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.religion || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, religion: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.religion || 'Não informado'}</p>
                       )}
                     </div>
 
@@ -1391,17 +1452,192 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
 
                     {isEditing && (
                       <div className="md:col-span-2">
-                        <label className="flex items-center space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={formData?.isActive ?? true}
-                            onChange={(e) => setFormData(prev => prev ? ({ ...prev, isActive: e.target.checked }) : null)}
-                            className="rounded border-gray-700 bg-gray-800 text-green-600 focus:ring-green-600 focus:ring-offset-gray-900"
-                          />
-                          <span className="text-gray-300">Ativo</span>
-                        </label>
+                        <div className="space-y-3">
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={formData?.isFounder || false}
+                              onChange={(e) => setFormData(prev => prev ? ({ ...prev, isFounder: e.target.checked }) : null)}
+                              className="rounded border-gray-700 bg-gray-800 text-red-600 focus:ring-red-600 focus:ring-offset-gray-900"
+                            />
+                            <span className="text-gray-300">Fundador</span>
+                          </label>
+
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={formData?.isActive ?? true}
+                              onChange={(e) => setFormData(prev => prev ? ({ ...prev, isActive: e.target.checked }) : null)}
+                              className="rounded border-gray-700 bg-gray-800 text-green-600 focus:ring-green-600 focus:ring-offset-gray-900"
+                            />
+                            <span className="text-gray-300">Ativo</span>
+                          </label>
+
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={formData?.isAdmin || false}
+                              onChange={(e) => setFormData(prev => prev ? ({ ...prev, isAdmin: e.target.checked }) : null)}
+                              className="rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-gray-900"
+                            />
+                            <span className="text-gray-300">Administrador</span>
+                          </label>
+                        </div>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Spiritual Development Dates */}
+                <div>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Evolução</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Início de Desenvolvimento
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.developmentStartDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, developmentStartDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.developmentStartDate ? formatDate(selectedProfileStudent.developmentStartDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Início do Estágio
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.internshipStartDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, internshipStartDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.internshipStartDate ? formatDate(selectedProfileStudent.internshipStartDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Iniciação como Magista
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.magistInitiationDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, magistInitiationDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.magistInitiationDate ? formatDate(selectedProfileStudent.magistInitiationDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Entrada na N.O.T.
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.notEntryDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, notEntryDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.notEntryDate ? formatDate(selectedProfileStudent.notEntryDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Iniciação como Mestre Mago
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          value={formData?.masterMagusInitiationDate || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, masterMagusInitiationDate: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.masterMagusInitiationDate ? formatDate(selectedProfileStudent.masterMagusInitiationDate) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Social Media */}
+                <div>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Redes Sociais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Instagram Pessoal
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.instagramPersonal || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, instagramPersonal: e.target.value.replace('@', '') }) : null)}
+                          placeholder="usuario (sem @)"
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.instagramPersonal ? (
+                            <a 
+                              href={`https://www.instagram.com/${selectedProfileStudent.instagramPersonal}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              @{selectedProfileStudent.instagramPersonal}
+                            </a>
+                          ) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Instagram Mágicko
+                      </label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.instagramMagicko || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, instagramMagicko: e.target.value.replace('@', '') }) : null)}
+                          placeholder="usuario (sem @)"
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.instagramMagicko ? (
+                            <a 
+                              href={`https://www.instagram.com/${selectedProfileStudent.instagramMagicko}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              @{selectedProfileStudent.instagramMagicko}
+                            </a>
+                          ) : 'Não informado'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
