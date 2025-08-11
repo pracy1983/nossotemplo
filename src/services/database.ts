@@ -1,4 +1,17 @@
 import { supabase, supabaseManager } from '../lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+
+// Cliente de administração do Supabase para operações privilegiadas
+const supabaseAdmin = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 // Interfaces para tipos do banco de dados
 interface DatabaseStudent {
@@ -623,24 +636,72 @@ export const updateStudent = async (id: string, updates: Partial<Student>): Prom
 
 export const deleteStudent = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase
+    // Primeiro, buscar o email do aluno
+    const { data: student, error: fetchError } = await supabase
+      .from('students')
+      .select('email')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Erro ao buscar email do aluno:', fetchError);
+      throw new Error(`Erro ao buscar email do aluno: ${fetchError.message}`);
+    }
+
+    // Excluir o aluno da tabela students
+    const { error: deleteError } = await supabase
       .from('students')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting student:', error);
-      throw new Error(`Erro ao deletar aluno: ${error.message}`);
+    if (deleteError) {
+      console.error('Erro ao excluir aluno:', deleteError);
+      throw new Error(`Erro ao excluir aluno: ${deleteError.message}`);
+    }
+
+    // Se encontrou o email, tentar excluir o usuário do Auth
+    if (student?.email) {
+      try {
+        // Primeiro, buscar o ID do usuário pelo email
+        const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
+
+        if (userError) {
+          console.error('Erro ao buscar usuário na autenticação:', userError);
+          // Não lançamos erro aqui para não reverter a exclusão do aluno
+          console.warn(`Usuário ${student.email} excluído da tabela students, mas não foi possível excluir da autenticação.`);
+          return;
+        }
+
+        // Filtrar o usuário pelo email e excluir
+        if (users && users.length > 0) {
+          const userToDelete = users.find(user => user.email === student.email);
+          
+          if (userToDelete) {
+            const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
+            
+            if (deleteAuthError) {
+              console.error('Erro ao excluir usuário da autenticação:', deleteAuthError);
+              console.warn(`Usuário ${student.email} excluído da tabela students, mas não foi possível excluir da autenticação.`);
+            } else {
+              console.log(`Usuário ${student.email} excluído com sucesso da autenticação.`);
+            }
+          } else {
+            console.log(`Usuário com email ${student.email} não encontrado na autenticação.`);
+          }
+        }
+      } catch (authError) {
+        console.error('Erro ao excluir usuário da autenticação:', authError);
+        // Não lançamos erro aqui para não reverter a exclusão do aluno
+      }
     }
   } catch (error) {
-    console.error('Error in deleteStudent:', error);
+    console.error('Erro em deleteStudent:', error);
     throw error;
   }
 };
 
 import { SITE_CONFIG } from '../config/site';
 
-// Invite operations
 export const sendStudentInvite = async (inviteData: InviteData): Promise<string> => {
   try {
     // Generate unique invite token
