@@ -1,17 +1,22 @@
 import { supabase, supabaseManager } from '../lib/supabaseClient';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Cliente de administração do Supabase para operações privilegiadas
-const supabaseAdmin = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+// Cliente de administração do Supabase para operações privilegiadas (somente se houver chave de serviço)
+const __ADMIN_URL__ = (import.meta as any)?.env?.VITE_SUPABASE_URL as string | undefined;
+const __SERVICE_KEY__ = (import.meta as any)?.env?.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+let supabaseAdmin: SupabaseClient | null = null;
+if (__ADMIN_URL__ && __SERVICE_KEY__) {
+  supabaseAdmin = createClient(
+    __ADMIN_URL__,
+    __SERVICE_KEY__,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
     }
-  }
-);
+  );
+}
 
 // Interfaces para tipos do banco de dados
 interface DatabaseStudent {
@@ -662,6 +667,11 @@ export const deleteStudent = async (id: string): Promise<void> => {
     // Se encontrou o email, tentar excluir o usuário do Auth
     if (student?.email) {
       try {
+        // Se não houver cliente admin (sem service role no ambiente), não tenta excluir no Auth
+        if (!supabaseAdmin) {
+          console.warn('SUPABASE_SERVICE_ROLE_KEY ausente. Pular exclusão no Auth e manter apenas remoção em students.');
+          return;
+        }
         // Primeiro, buscar o ID do usuário pelo email
         const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers();
 
