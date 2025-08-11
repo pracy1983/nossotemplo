@@ -508,7 +508,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
               <option value="all">Todos os Status</option>
               <option value="pending">Pendente</option>
               <option value="accepted">Aceito</option>
-              <option value="expired">Expirado</option>
             </select>
 
             <select
@@ -533,7 +532,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
-            <Mail className="w-6 h-6 text-red-400" />
           </h2>
           
           {/* Botões de ação em massa */}
@@ -916,18 +914,40 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 Apagar
               </button>
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
                   setActionMenuOpenId(null);
                   setMenuPos(null);
-                  alert('Enviando e-mail para ' + currentActionStudent.email);
+                  
+                  try {
+                    // Gerar nova senha temporária
+                    const tempPassword = generateTempPassword();
+                    
+                    // Atualizar o estudante com a nova senha
+                    const updatedStudent = {
+                      ...currentActionStudent,
+                      tempPassword: tempPassword
+                    };
+                    
+                    // Atualizar no banco de dados
+                    await addStudent(updatedStudent);
+                    
+                    // Enviar e-mail com a nova senha
+                    const inviteUrl = `${window.location.origin}/convite/${updatedStudent.inviteToken || ''}`;
+                    await sendInviteEmail(updatedStudent.email, inviteUrl, updatedStudent.fullName, tempPassword);
+                    
+                    toast.success('Senha reenviada com sucesso');
+                  } catch (error) {
+                    console.error('Erro ao reenviar senha:', error);
+                    toast.error('Erro ao reenviar senha');
+                  }
                 }}
                 className="flex items-center w-full px-4 py-2 text-sm text-blue-400 hover:bg-gray-800"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Enviar E-mail
+                Reenviar Senha
               </button>
             </div>
           </div>
