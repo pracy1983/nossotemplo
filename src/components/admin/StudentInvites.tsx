@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, Edit3, Save, X, Upload } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
-import { InviteData, Student } from '../../types';
-import { generateId, validateEmail, generateTempPassword } from '../../utils/helpers';
+import { Student } from '../../types';
+import { DEFAULT_TEMPLES } from '../../utils/constants';
+import { validateEmail, generateId, generateTempPassword } from '../../utils/helpers';
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
-import { createPortal } from 'react-dom';
 
 interface StudentInvitesProps {
   onNavigateToAddStudent?: () => void;
 }
 
 const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent }) => {
-  const { students: initialStudents, temples, addStudent, deleteStudent } = useData();
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const { students, addStudent, deleteStudent, turmas, temples, updateStudent } = useData();
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>(students);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'accepted' | 'expired'>('all');
@@ -34,7 +35,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   });
   const [showSendEmailsModal, setShowSendEmailsModal] = useState(false);
 
-  const [inviteForm, setInviteForm] = useState<InviteData>({
+  const [inviteForm, setInviteForm] = useState({
     fullName: '',
     email: '',
     unit: temples.length > 0 ? temples[0].abbreviation : 'SP',
@@ -53,10 +54,10 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   
   // Estados para edição de perfil
   const [isEditing, setIsEditing] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState<Student | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [photo, setPhoto] = useState<string>('');
+  const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
 
   // Fecha menu ao clicar fora
   useEffect(() => {
@@ -75,14 +76,30 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     };
   }, [actionMenuOpenId]);
 
-  // Update local state when initialStudents changes
+  // Update local state when students changes
   useEffect(() => {
-    setStudents(initialStudents);
-  }, [initialStudents]);
+    setFilteredStudents(students);
+  }, [students]);
+
+  // Função para lidar com o upload de foto
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target && event.target.result) {
+          setPhoto(event.target.result as string);
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Get students with invite information
-  const invitedStudents = students.filter(student => 
-    student.inviteStatus || student.isPendingApproval
+  const invitedStudents = filteredStudents.filter(student => 
+    student.inviteStatus || student.inviteToken
   );
 
   // Filter invited students
@@ -907,7 +924,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                   
                   // Abrir modal de perfil em modo de edição
                   setSelectedProfileStudent(currentActionStudent);
-                  setEditingStudent(currentActionStudent);
+                  setIsEditing(false);
                   setFormData({...currentActionStudent});
                   setPhoto(currentActionStudent.photo || '');
                   setIsEditing(true);
@@ -929,9 +946,8 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     try {
                       await deleteStudent(currentActionStudent.id!);
                       toast.success('Membro apagado com sucesso');
-                      // Atualiza a lista de estudantes após a exclusão
-                      const updatedStudents = students.filter(s => s.id !== currentActionStudent.id);
-                      setStudents(updatedStudents);
+                      // Não precisamos atualizar manualmente a lista de estudantes
+                      // pois o useEffect vai detectar a mudança em students
                     } catch (error) {
                       console.error('Erro ao apagar membro:', error);
                       toast.error('Erro ao apagar membro');
@@ -1129,7 +1145,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
           setIsProfileModalOpen(false);
           setSelectedProfileStudent(null);
           setIsEditing(false);
-          setEditingStudent(null);
           setFormData(null);
         }}
         title={isEditing ? 'Editar Perfil' : 'Perfil do Usuário'}
@@ -1162,9 +1177,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       }}
                       className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <X className="w-4 h-4" />
                       <span>Fechar</span>
                     </button>
                     <button
@@ -1172,16 +1185,13 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                         // Iniciar modo de edição no mesmo modal
                         if (selectedProfileStudent) {
                           setIsEditing(true);
-                          setEditingStudent(selectedProfileStudent);
                           setFormData({...selectedProfileStudent});
                           setPhoto(selectedProfileStudent.photo || '');
                         }
                       }}
                       className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                      <Edit3 className="w-4 h-4" />
                       <span>Editar</span>
                     </button>
                   </>
@@ -1198,21 +1208,17 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                               photo: photo || formData.photo
                             };
                             
-                            // Salvar no banco de dados
-                            await addStudent(updatedStudent);
+                            // Salvar no banco de dados usando updateStudent
+                            await updateStudent(updatedStudent.id, updatedStudent);
                             
-                            // Atualizar a lista local
-                            const updatedStudents = students.map(s => 
-                              s.id === updatedStudent.id ? updatedStudent : s
-                            );
-                            setStudents(updatedStudents);
+                            // Não precisamos atualizar a lista local manualmente
+                            // pois o useEffect vai detectar a mudança em students
                             
                             // Atualizar o estudante selecionado
                             setSelectedProfileStudent(updatedStudent);
                             
                             // Sair do modo de edição
                             setIsEditing(false);
-                            setEditingStudent(null);
                             
                             // Notificar sucesso
                             toast.success('Perfil atualizado com sucesso!');
@@ -1227,23 +1233,21 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       disabled={isSaving}
                       className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-600/50 px-4 py-2 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <Save className="w-4 h-4" />
                       <span>{isSaving ? 'Salvando...' : 'Salvar'}</span>
                     </button>
                     <button
                       onClick={() => {
                         setIsEditing(false);
-                        setFormData(selectedProfileStudent);
-                        setPhoto(selectedProfileStudent.photo || '');
-                        setErrors({});
+                        if (selectedProfileStudent) {
+                          setFormData(selectedProfileStudent);
+                          setPhoto(selectedProfileStudent.photo || '');
+                        }
+                        setProfileErrors({});
                       }}
                       className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <X className="w-4 h-4" />
                       <span>Cancelar</span>
                     </button>
                   </>
@@ -1257,30 +1261,19 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 <div className="space-y-4">
                   <div className="relative">
                     <img
-                      src={isEditing ? (photo || selectedProfileStudent.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop') : (selectedProfileStudent.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop')}
+                      src={photo || selectedProfileStudent.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop'}
                       alt={selectedProfileStudent.fullName}
                       className="w-full h-80 object-cover rounded-lg"
                     />
                     {isEditing && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
                         <label className="cursor-pointer bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors">
-                          <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                          <Upload className="w-5 h-5 inline mr-2" />
                           Alterar Foto
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setPhoto(reader.result as string);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
+                            onChange={(e) => handlePhotoUpload(e)}
                             className="hidden"
                           />
                         </label>
@@ -1292,383 +1285,125 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
 
               {/* Information Section */}
               <div className="lg:col-span-2 space-y-6">
-                {!isEditing ? (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Nome Completo</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.fullName || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Email</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.email || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Telefone</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.phone || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Nascimento</h3>
-                        <p className="text-lg font-medium text-white">
-                          {selectedProfileStudent.birthDate 
-                            ? new Date(selectedProfileStudent.birthDate).toLocaleDateString('pt-BR')
-                            : 'Não informada'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Templo</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.unit || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Turma</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.turma || 'Não informada'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">CPF</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.cpf || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">RG</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.rg || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Religião</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.religion || 'Não informada'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Status do Convite</h3>
-                        <p className="text-lg font-medium text-white">
-                          {selectedProfileStudent.inviteStatus === 'pending' && 'Pendente'}
-                          {selectedProfileStudent.inviteStatus === 'accepted' && 'Aceito'}
-                          {selectedProfileStudent.inviteStatus === 'expired' && 'Expirado'}
-                          {!selectedProfileStudent.inviteStatus && 'Não aplicável'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Registro</h3>
-                        <p className="text-lg font-medium text-white">
-                          {selectedProfileStudent.invitedAt 
-                            ? new Date(selectedProfileStudent.invitedAt).toLocaleDateString('pt-BR')
-                            : 'Não informada'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Rua</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.street || 'Não informada'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Número</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.number || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Complemento</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.complement || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Bairro</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.neighborhood || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Cidade/UF</h3>
-                        <p className="text-lg font-medium text-white">
-                          {selectedProfileStudent.city && selectedProfileStudent.state 
-                            ? `${selectedProfileStudent.city} - ${selectedProfileStudent.state}`
-                            : 'Não informado'}
-                        </p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">CEP</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.zipCode || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Como conheceu o templo</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.howFoundTemple || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Instagram Pessoal</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.instagramPersonal || 'Não informado'}</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Instagram Mágicko</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.instagramMagicko || 'Não informado'}</p>
-                      </div>
-                      
-                      {/* Datas de Iniciação */}
-                      <div className="col-span-2 mt-4">
-                        <h3 className="text-sm font-medium text-gray-400 mb-2">Datas de Iniciação</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/50 p-4 rounded-lg">
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Início do Desenvolvimento</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.developmentStartDate 
-                                ? new Date(selectedProfileStudent.developmentStartDate).toLocaleDateString('pt-BR')
-                                : 'Não informado'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Início do Estágio</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.internshipStartDate 
-                                ? new Date(selectedProfileStudent.internshipStartDate).toLocaleDateString('pt-BR')
-                                : 'Não informado'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Iniciação como Magist</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.magistInitiationDate 
-                                ? new Date(selectedProfileStudent.magistInitiationDate).toLocaleDateString('pt-BR')
-                                : 'Não informado'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Entrada no NOT</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.notEntryDate 
-                                ? new Date(selectedProfileStudent.notEntryDate).toLocaleDateString('pt-BR')
-                                : 'Não informado'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Iniciação como Mestre Mágico</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.masterMagusInitiationDate 
-                                ? new Date(selectedProfileStudent.masterMagusInitiationDate).toLocaleDateString('pt-BR')
-                                : 'Não informado'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Status e Cargos */}
-                      <div className="col-span-2 mt-4">
-                        <h3 className="text-sm font-medium text-gray-400 mb-2">Status e Cargos</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/50 p-4 rounded-lg">
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className="text-white">
-                              {selectedProfileStudent.isActive ? 'Ativo' : 'Inativo'}
-                              {selectedProfileStudent.inactiveSince && ` (desde ${new Date(selectedProfileStudent.inactiveSince).toLocaleDateString('pt-BR')})`}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isFounder ? 'bg-yellow-500' : 'bg-gray-500'}`}></div>
-                            <span className="text-white">
-                              {selectedProfileStudent.isFounder ? 'Fundador' : 'Não é fundador'}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isAdmin ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
-                            <span className="text-white">
-                              {selectedProfileStudent.isAdmin ? 'Administrador' : 'Não é administrador'}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isGuest ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
-                            <span className="text-white">
-                              {selectedProfileStudent.isGuest ? 'Convidado' : 'Não é convidado'}
-                            </span>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Cargo</h4>
-                            <p className="text-white capitalize">
-                              {selectedProfileStudent.role || 'Não definido'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Última Atividade</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.lastActivity 
-                                ? new Date(selectedProfileStudent.lastActivity).toLocaleString('pt-BR')
-                                : 'Nenhum registro'}
-                            </p>
-                          </div>
-                          
-                          <div>
-                            <h4 className="text-xs font-medium text-gray-400 mb-1">Termos de Imagem</h4>
-                            <p className="text-white">
-                              {selectedProfileStudent.acceptsImageTerms 
-                                ? `Aceito em ${selectedProfileStudent.imageTermsAcceptedAt ? new Date(selectedProfileStudent.imageTermsAcceptedAt).toLocaleDateString('pt-BR') : 'data não registrada'}`
-                                : 'Não aceito'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                {/* Personal Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Informações Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Nome Completo</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.fullName || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, fullName: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.fullName || ''}</p>
+                      )}
+                      {profileErrors.fullName && <p className="text-red-400 text-sm mt-1">{profileErrors.fullName}</p>}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Formulário de edição */}
-                    {formData && (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Nome Completo</label>
-                            <input
-                              type="text"
-                              value={formData.fullName}
-                              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
-                            <input
-                              type="email"
-                              value={formData.email}
-                              onChange={(e) => setFormData({...formData, email: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Telefone</label>
-                            <input
-                              type="tel"
-                              value={formData.phone || ''}
-                              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Data de Nascimento</label>
-                            <input
-                              type="date"
-                              value={formData.birthDate || ''}
-                              onChange={(e) => setFormData({...formData, birthDate: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Templo</label>
-                            <select
-                              value={formData.unit || ''}
-                              onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                              {temples.map(temple => (
-                                <option key={temple.id} value={temple.abbreviation}>{temple.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Turma</label>
-                            <input
-                              type="text"
-                              value={formData.turma || ''}
-                              onChange={(e) => setFormData({...formData, turma: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Rua</label>
-                            <input
-                              type="text"
-                              value={formData.street || ''}
-                              onChange={(e) => setFormData({...formData, street: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Número</label>
-                            <input
-                              type="text"
-                              value={formData.number || ''}
-                              onChange={(e) => setFormData({...formData, number: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Complemento</label>
-                            <input
-                              type="text"
-                              value={formData.complement || ''}
-                              onChange={(e) => setFormData({...formData, complement: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Bairro</label>
-                            <input
-                              type="text"
-                              value={formData.neighborhood || ''}
-                              onChange={(e) => setFormData({...formData, neighborhood: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Cidade</label>
-                            <input
-                              type="text"
-                              value={formData.city || ''}
-                              onChange={(e) => setFormData({...formData, city: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">Estado</label>
-                            <input
-                              type="text"
-                              value={formData.state || ''}
-                              onChange={(e) => setFormData({...formData, state: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          
-                          <div>
-                            <label className="block text-sm font-medium text-gray-400 mb-1">CEP</label>
-                            <input
-                              type="text"
-                              value={formData.zipCode || ''}
-                              onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                      {isEditing ? (
+                        <input
+                          type="email"
+                          value={formData?.email || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, email: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.email || ''}</p>
+                      )}
+                      {profileErrors.email && <p className="text-red-400 text-sm mt-1">{profileErrors.email}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Telefone</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.phone || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, phone: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.phone || 'Não informado'}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Templo</label>
+                      {isEditing ? (
+                        <select
+                          value={formData?.unit || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, unit: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        >
+                          {temples.map(temple => (
+                            <option key={temple.id} value={temple.abbreviation}>
+                              Templo {temple.abbreviation} - {temple.city}
+                            </option>
+                          ))}
+                          {temples.length === 0 && (
+                            <>
+                              <option value="SP">Templo SP - São Paulo</option>
+                              <option value="BH">Templo BH - Belo Horizonte</option>
+                              <option value="CP">Templo CP - Campinas</option>
+                            </>
+                          )}
+                        </select>
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent.unit ? 
+                            `Templo ${selectedProfileStudent.unit} - ${DEFAULT_TEMPLES[selectedProfileStudent.unit as keyof typeof DEFAULT_TEMPLES] || selectedProfileStudent.unit}` : 
+                            'Não informado'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Turma</label>
+                      {isEditing ? (
+                        <select
+                          value={formData?.turmaId || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, turmaId: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        >
+                          <option value="">Não se aplica</option>
+                          {turmas.map(turma => (
+                            <option key={turma.id} value={turma.id}>
+                              Turma {turma.numero} - {DEFAULT_TEMPLES[turma.unit as keyof typeof DEFAULT_TEMPLES] || turma.unit}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent.turmaId ? (
+                            turmas.find(t => t.id === selectedProfileStudent.turmaId)?.numero
+                              ? `Turma ${turmas.find(t => t.id === selectedProfileStudent.turmaId)?.numero} - ${DEFAULT_TEMPLES[turmas.find(t => t.id === selectedProfileStudent.turmaId)?.unit as keyof typeof DEFAULT_TEMPLES] || turmas.find(t => t.id === selectedProfileStudent.turmaId)?.unit}`
+                              : 'Turma não encontrada'
+                          ) : 'Não se aplica'}
+                        </p>
+                      )}
+                    </div>
+
+                    {isEditing && (
+                      <div className="md:col-span-2">
+                        <label className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={formData?.isActive ?? true}
+                            onChange={(e) => setFormData(prev => prev ? ({ ...prev, isActive: e.target.checked }) : null)}
+                            className="rounded border-gray-700 bg-gray-800 text-green-600 focus:ring-green-600 focus:ring-offset-gray-900"
+                          />
+                          <span className="text-gray-300">Ativo</span>
+                        </label>
                       </div>
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
