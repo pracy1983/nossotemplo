@@ -1297,12 +1297,12 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Nome Completo</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.fullName}</p>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.fullName || 'Não informado'}</p>
                       </div>
                       
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Email</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.email}</p>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.email || 'Não informado'}</p>
                       </div>
                       
                       <div>
@@ -1312,7 +1312,11 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Nascimento</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.birthDate || 'Não informada'}</p>
+                        <p className="text-lg font-medium text-white">
+                          {selectedProfileStudent.birthDate 
+                            ? new Date(selectedProfileStudent.birthDate).toLocaleDateString('pt-BR')
+                            : 'Não informada'}
+                        </p>
                       </div>
                       
                       <div>
@@ -1323,6 +1327,21 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Turma</h3>
                         <p className="text-lg font-medium text-white">{selectedProfileStudent.turma || 'Não informada'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">CPF</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.cpf || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">RG</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.rg || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Religião</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.religion || 'Não informada'}</p>
                       </div>
                       
                       <div>
@@ -1337,31 +1356,62 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Data de Registro</h3>
-                        <p className="text-lg font-medium text-white">{selectedProfileStudent.invitedAt || 'Não informada'}</p>
-                      </div>
-                    </div>
-                    
-                    {(selectedProfileStudent.street || selectedProfileStudent.city) && (
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-400 mb-1">Endereço</h3>
                         <p className="text-lg font-medium text-white">
-                          {[selectedProfileStudent.street, 
-                            selectedProfileStudent.number && `Nº ${selectedProfileStudent.number}`,
-                            selectedProfileStudent.complement,
-                            selectedProfileStudent.neighborhood,
-                            selectedProfileStudent.city && selectedProfileStudent.state && `${selectedProfileStudent.city} - ${selectedProfileStudent.state}`,
-                            selectedProfileStudent.zipCode
-                          ].filter(Boolean).join(', ')}
+                          {selectedProfileStudent.invitedAt 
+                            ? new Date(selectedProfileStudent.invitedAt).toLocaleDateString('pt-BR')
+                            : 'Não informada'}
                         </p>
                       </div>
-                    )}
-                    
-                    {selectedProfileStudent.howFoundTemple && (
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Rua</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.street || 'Não informada'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Número</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.number || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Complemento</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.complement || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Bairro</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.neighborhood || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Cidade/UF</h3>
+                        <p className="text-lg font-medium text-white">
+                          {selectedProfileStudent.city && selectedProfileStudent.state 
+                            ? `${selectedProfileStudent.city} - ${selectedProfileStudent.state}`
+                            : 'Não informado'}
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">CEP</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.zipCode || 'Não informado'}</p>
+                      </div>
+                      
                       <div>
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Como conheceu o templo</h3>
-                        <p className="text-white">{selectedProfileStudent.howFoundTemple}</p>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.howFoundTemple || 'Não informado'}</p>
                       </div>
-                    )}
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Instagram Pessoal</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.instagramPersonal || 'Não informado'}</p>
+                      </div>
+                      
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Instagram Mágicko</h3>
+                        <p className="text-lg font-medium text-white">{selectedProfileStudent.instagramMagicko || 'Não informado'}</p>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <>
