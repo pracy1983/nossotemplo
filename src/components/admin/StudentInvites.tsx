@@ -1411,6 +1411,117 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                         <h3 className="text-sm font-medium text-gray-400 mb-1">Instagram Mágicko</h3>
                         <p className="text-lg font-medium text-white">{selectedProfileStudent.instagramMagicko || 'Não informado'}</p>
                       </div>
+                      
+                      {/* Datas de Iniciação */}
+                      <div className="col-span-2 mt-4">
+                        <h3 className="text-sm font-medium text-gray-400 mb-2">Datas de Iniciação</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/50 p-4 rounded-lg">
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Início do Desenvolvimento</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.developmentStartDate 
+                                ? new Date(selectedProfileStudent.developmentStartDate).toLocaleDateString('pt-BR')
+                                : 'Não informado'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Início do Estágio</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.internshipStartDate 
+                                ? new Date(selectedProfileStudent.internshipStartDate).toLocaleDateString('pt-BR')
+                                : 'Não informado'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Iniciação como Magist</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.magistInitiationDate 
+                                ? new Date(selectedProfileStudent.magistInitiationDate).toLocaleDateString('pt-BR')
+                                : 'Não informado'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Entrada no NOT</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.notEntryDate 
+                                ? new Date(selectedProfileStudent.notEntryDate).toLocaleDateString('pt-BR')
+                                : 'Não informado'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Iniciação como Mestre Mágico</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.masterMagusInitiationDate 
+                                ? new Date(selectedProfileStudent.masterMagusInitiationDate).toLocaleDateString('pt-BR')
+                                : 'Não informado'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status e Cargos */}
+                      <div className="col-span-2 mt-4">
+                        <h3 className="text-sm font-medium text-gray-400 mb-2">Status e Cargos</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-800/50 p-4 rounded-lg">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className="text-white">
+                              {selectedProfileStudent.isActive ? 'Ativo' : 'Inativo'}
+                              {selectedProfileStudent.inactiveSince && ` (desde ${new Date(selectedProfileStudent.inactiveSince).toLocaleDateString('pt-BR')})`}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isFounder ? 'bg-yellow-500' : 'bg-gray-500'}`}></div>
+                            <span className="text-white">
+                              {selectedProfileStudent.isFounder ? 'Fundador' : 'Não é fundador'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isAdmin ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
+                            <span className="text-white">
+                              {selectedProfileStudent.isAdmin ? 'Administrador' : 'Não é administrador'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-3 h-3 rounded-full ${selectedProfileStudent.isGuest ? 'bg-purple-500' : 'bg-gray-500'}`}></div>
+                            <span className="text-white">
+                              {selectedProfileStudent.isGuest ? 'Convidado' : 'Não é convidado'}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Cargo</h4>
+                            <p className="text-white capitalize">
+                              {selectedProfileStudent.role || 'Não definido'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Última Atividade</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.lastActivity 
+                                ? new Date(selectedProfileStudent.lastActivity).toLocaleString('pt-BR')
+                                : 'Nenhum registro'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-medium text-gray-400 mb-1">Termos de Imagem</h4>
+                            <p className="text-white">
+                              {selectedProfileStudent.acceptsImageTerms 
+                                ? `Aceito em ${selectedProfileStudent.imageTermsAcceptedAt ? new Date(selectedProfileStudent.imageTermsAcceptedAt).toLocaleDateString('pt-BR') : 'data não registrada'}`
+                                : 'Não aceito'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </>
                 ) : (
