@@ -530,29 +530,24 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     alert(`Membro ${student.fullName} aprovado com sucesso!`);
   };
 
-  const handleRejectStudent = async (id: string) => {
+  const handleRejectStudent = async (studentId: string) => {
     try {
-      // Update student to rejected status
-      const student = students.find(s => s.id === id);
+      // Encontrar o estudante
+      const student = students.find(s => s.id === studentId);
       if (!student) return;
-
-      const updatedStudentData = {
-        ...student,
-        isPendingApproval: false,
-        isActive: false,
-        inviteStatus: 'rejected' as const
-      };
-
-      // In a real app, you would call updateStudent with updatedStudentData
-      console.log('Dados do membro rejeitado:', updatedStudentData);
       
-      alert(`Membro ${student.fullName} rejeitado com sucesso!`);
+      // Atualizar status para rejected
+      await updateStudent(studentId, { ...student, inviteStatus: 'expired' });
+      
+      toast.success('Convite rejeitado com sucesso');
     } catch (error) {
       console.error('Error rejecting student:', error);
       alert('Erro ao rejeitar membro. Tente novamente.');
     }
   };
 
+
+  
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'pending':
@@ -1385,6 +1380,15 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                       <X className="w-4 h-4" />
                       <span>Fechar</span>
                     </button>
+                    {selectedProfileStudent && selectedProfileStudent.inviteStatus === 'pending' && (
+                      <button
+                        onClick={() => handleResendEmail(selectedProfileStudent)}
+                        className="flex items-center space-x-2 bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        <span>Reenviar Email</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         // Iniciar modo de edição no mesmo modal
@@ -1454,6 +1458,13 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     >
                       <X className="w-4 h-4" />
                       <span>Cancelar</span>
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Excluir</span>
                     </button>
                   </>
                 )}
