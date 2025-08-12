@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, Edit3, Save, X, Upload } from 'lucide-react';
+import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, Edit3, Save, X, Upload, Grid, List, Trash2 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
-import { Student } from '../../types';
+import { Student, ViewMode } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
 import { validateEmail, formatCPF, formatPhone, formatDate, generateId, generateTempPassword } from '../../utils/helpers';
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
@@ -28,7 +28,21 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   // Variáveis de estado para as funcionalidades solicitadas
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  
+  // Estado para controle de visualização (lista/cards)
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Carregar preferência do localStorage ou usar 'list' como padrão
+    const saved = localStorage.getItem('memberManagement_preferences');
+    return saved ? JSON.parse(saved).viewMode || 'list' : 'list';
+  });
+  
+  // Estado para controle de itens por página
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    // Carregar preferência do localStorage ou usar 10 como padrão
+    const saved = localStorage.getItem('memberManagement_preferences');
+    return saved ? JSON.parse(saved).itemsPerPage || 10 : 10;
+  });
+  
   const [emailTemplate, setEmailTemplate] = useState({
     subject: 'Convite para o Nosso Templo',
     body: 'Olá {nome},\n\nVocê foi convidado para participar do Nosso Templo.\n\nClique no link abaixo para aceitar o convite:\n{link}\n\nAtenciosamente,\nEquipe Nosso Templo'
@@ -102,6 +116,14 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     student.inviteStatus || student.inviteToken
   );
 
+  // Função para salvar preferências do usuário
+  const saveUserPreferences = () => {
+    localStorage.setItem('memberManagement_preferences', JSON.stringify({
+      viewMode,
+      itemsPerPage
+    }));
+  };
+
   // Filter invited students
   const filteredInvites = invitedStudents.filter(student => {
     const matchesSearch = student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,6 +139,51 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const paginatedStudents = filteredInvites.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
+  
+  // Componente StudentCard para visualização em cards
+  const StudentCard: React.FC<{ student: Student }> = ({ student }) => (
+    <div
+      onClick={() => {
+        setSelectedProfileStudent(student);
+        setFormData(student);
+        setPhoto(student.photo || '');
+        setIsEditing(false);
+        setErrors({});
+      }}
+      className={`bg-gray-900 rounded-xl p-6 border border-gray-800 cursor-pointer transition-all hover:border-red-600 hover:shadow-lg ${
+        !student.isActive ? 'opacity-60' : ''
+      }`}
+    >
+      <div className="flex flex-col items-center space-y-4">
+        {/* Photo */}
+        <div className="relative">
+          <img
+            src={student.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop'}
+            alt={student.fullName}
+            className="w-24 h-32 object-cover rounded-lg"
+          />
+          {student.isFounder && (
+            <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+              Fundador
+            </div>
+          )}
+        </div>
+        
+        {/* Info */}
+        <div className="text-center">
+          <h3 className="font-semibold text-white mb-1">{student.fullName}</h3>
+          <p className="text-gray-400 text-sm">{DEFAULT_TEMPLES[student.unit as keyof typeof DEFAULT_TEMPLES]}</p>
+          <div className={`mt-2 w-44 text-center py-1 rounded-full text-xs font-medium ${
+            student.isActive
+              ? 'bg-green-600/20 text-green-400'
+              : 'bg-red-600/20 text-red-400'
+          }`}>
+            {student.isActive ? 'Ativo' : `Inativo desde ${student.inactiveSince || 'N/A'}`}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   // Student ativo para o menu de ações
   const currentActionStudent = students.find(s => s.id === actionMenuOpenId);
@@ -180,6 +247,52 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const handleBulkSendEmails = () => {
     if (selectedStudents.size === 0) return;
     setShowSendEmailsModal(true);
+  };
+  
+  // Função para reenviar email
+  const handleResendEmail = async (student: Student) => {
+    try {
+      setIsSaving(true);
+      
+      // Gerar nova senha temporária
+      const tempPassword = generateTempPassword();
+      
+      // Atualizar o estudante com a nova senha
+      const updatedStudent = {
+        ...student,
+        tempPassword: tempPassword
+      };
+      
+      // Atualizar no banco de dados
+      await updateStudent(updatedStudent.id, updatedStudent);
+      
+      // Enviar e-mail com a nova senha
+      const inviteUrl = `${window.location.origin}/convite/${updatedStudent.inviteToken || ''}`;
+      await sendInviteEmail(updatedStudent.email, inviteUrl, updatedStudent.fullName, tempPassword);
+      
+      toast.success('Email reenviado com sucesso');
+    } catch (error) {
+      console.error('Erro ao reenviar email:', error);
+      toast.error('Erro ao reenviar email');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  // Função para excluir membro
+  const handleDelete = async () => {
+    if (!selectedProfileStudent) return;
+    
+    if (confirm(`Tem certeza que deseja excluir o membro ${selectedProfileStudent.fullName}? Esta ação não pode ser desfeita.`)) {
+      try {
+        await deleteStudent(selectedProfileStudent.id);
+        setSelectedProfileStudent(null);
+        toast.success('Membro excluído com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir membro:', error);
+        toast.error('Erro ao excluir membro');
+      }
+    }
   };
   
   const handleSendBulkEmails = async () => {
@@ -549,6 +662,38 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 </option>
               ))}
             </select>
+            
+            {/* Toggle de visualização (lista/cards) */}
+            <div className="flex items-center ml-2">
+              <div className="flex items-center space-x-1 bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => {
+                    setViewMode('list');
+                    localStorage.setItem('memberManagement_preferences', JSON.stringify({
+                      viewMode: 'list',
+                      itemsPerPage
+                    }));
+                  }}
+                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-red-600 text-white' : 'text-gray-400'}`}
+                  title="Visualização em lista"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    setViewMode('card');
+                    localStorage.setItem('memberManagement_preferences', JSON.stringify({
+                      viewMode: 'card',
+                      itemsPerPage
+                    }));
+                  }}
+                  className={`p-2 rounded ${viewMode === 'card' ? 'bg-red-600 text-white' : 'text-gray-400'}`}
+                  title="Visualização em cards"
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -578,145 +723,205 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         </div>
         
         {filteredInvites.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-800 border-b border-gray-700">
-                  <th className="p-3 text-left">
-                    <div className="flex items-center">
-                      <button 
-                        onClick={() => handleSelectAll(paginatedStudents)}
-                        className="mr-3 text-gray-400 hover:text-white"
-                      >
-                        {selectedStudents.size === paginatedStudents.length ? 
-                          <CheckSquare className="w-5 h-5" /> : 
-                          <Square className="w-5 h-5" />
-                        }
-                      </button>
-                      <span>Nome</span>
-                    </div>
-                  </th>
-                  <th className="p-3 text-left">Email</th>
-                  <th className="p-3 text-left">Templo</th>
-                  <th className="p-3 text-left">Status</th>
-                  <th className="p-3 text-left">Data</th>
-                  <th className="p-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedStudents.map(student => (
-                  <tr key={student.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="p-3">
+          <>
+            {/* Seletor de itens por página */}
+            <div className="flex items-center mb-4">
+              <span className="text-sm text-gray-400 mr-2">Itens por página:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  const newValue = parseInt(e.target.value);
+                  setItemsPerPage(newValue);
+                  setCurrentPage(1); // Reset para primeira página
+                  localStorage.setItem('memberManagement_preferences', JSON.stringify({
+                    viewMode,
+                    itemsPerPage: newValue
+                  }));
+                }}
+                className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+              >
+                <option value={10}>10</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            
+            {viewMode === 'list' ? (
+              <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-800 border-b border-gray-700">
+                    <th className="p-3 text-left">
                       <div className="flex items-center">
                         <button 
-                          onClick={() => handleSelectStudent(student.id!)}
+                          onClick={() => handleSelectAll(paginatedStudents)}
                           className="mr-3 text-gray-400 hover:text-white"
                         >
-                          {selectedStudents.has(student.id!) ? 
+                          {selectedStudents.size === paginatedStudents.length ? 
                             <CheckSquare className="w-5 h-5" /> : 
                             <Square className="w-5 h-5" />
                           }
                         </button>
-                        <span className="font-medium text-white">{student.fullName}</span>
+                        <span>Nome</span>
                       </div>
-                    </td>
-                    <td className="p-3 text-gray-400">{student.email}</td>
-                    <td className="p-3 text-gray-400">{student.unit} {student.turma && `• ${student.turma}`}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.inviteStatus)}`}>
-                        {getStatusLabel(student.inviteStatus)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-gray-400">{formatDate(student.invitedAt)}</td>
-                    <td className="p-3">
-                      <div className="flex items-center justify-end space-x-2">
-                        {student.inviteStatus === 'pending' && student.inviteToken && (
-                          <button
-                            onClick={() => handleCopyInviteLink(student.inviteToken!)}
-                            className="p-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg transition-colors"
-                            title="Copiar Link"
+                    </th>
+                    <th className="p-3 text-left">Email</th>
+                    <th className="p-3 text-left">Templo</th>
+                    <th className="p-3 text-left">Status</th>
+                    <th className="p-3 text-left">Data</th>
+                    <th className="p-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedStudents.map(student => (
+                    <tr key={student.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                      <td className="p-3">
+                        <div className="flex items-center">
+                          <button 
+                            onClick={() => handleSelectStudent(student.id!)}
+                            className="mr-3 text-gray-400 hover:text-white"
                           >
-                            {copiedToken === student.inviteToken ? 
-                              <Check className="w-4 h-4" /> : 
-                              <Copy className="w-4 h-4" />
+                            {selectedStudents.has(student.id!) ? 
+                              <CheckSquare className="w-5 h-5" /> : 
+                              <Square className="w-5 h-5" />
                             }
                           </button>
-                        )}
-                        
-                        {/* Botão de menu de ações */}
-                        <div className="relative">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const willOpen = actionMenuOpenId !== student.id;
-                              setActionMenuOpenId(willOpen ? student.id! : null);
-                              if (willOpen) {
-                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                                const menuWidth = 160; // w-40
-                                const left = Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8);
-                                const top = rect.bottom + 8;
-                                setMenuPos({ top, left });
-                              } else {
-                                setMenuPos(null);
-                              }
-                            }}
-                            className="p-1.5 bg-gray-700/30 text-gray-400 hover:bg-gray-600/50 rounded-lg transition-colors"
-                            title="Ações"
-                          >
-                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
-                              <circle cx="12" cy="6" r="1" fill="currentColor"/>
-                              <circle cx="12" cy="12" r="1" fill="currentColor"/>
-                              <circle cx="12" cy="18" r="1" fill="currentColor"/>
-                            </svg>
-                          </button>
-
+                          <span className="font-medium text-white">{student.fullName}</span>
                         </div>
+                      </td>
+                      <td className="p-3 text-gray-400">{student.email}</td>
+                      <td className="p-3 text-gray-400">{student.unit} {student.turma && `• ${student.turma}`}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.inviteStatus)}`}>
+                          {getStatusLabel(student.inviteStatus)}
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-400">{formatDate(student.invitedAt)}</td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-end space-x-2">
+                          {student.inviteStatus === 'pending' && student.inviteToken && (
+                            <button
+                              onClick={() => handleCopyInviteLink(student.inviteToken!)}
+                              className="p-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg transition-colors"
+                              title="Copiar Link"
+                            >
+                              {copiedToken === student.inviteToken ? 
+                                <Check className="w-4 h-4" /> : 
+                                <Copy className="w-4 h-4" />
+                              }
+                            </button>
+                          )}
+                          
+                          {/* Botão de menu de ações */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const willOpen = actionMenuOpenId !== student.id;
+                                setActionMenuOpenId(willOpen ? student.id! : null);
+                                if (willOpen) {
+                                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                  const menuWidth = 160; // w-40
+                                  const left = Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8);
+                                  const top = rect.bottom + 8;
+                                  setMenuPos({ top, left });
+                                } else {
+                                  setMenuPos(null);
+                                }
+                              }}
+                              className="p-1.5 bg-gray-700/30 text-gray-400 hover:bg-gray-600/50 rounded-lg transition-colors"
+                              title="Ações"
+                            >
+                              <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                                <circle cx="12" cy="6" r="1" fill="currentColor"/>
+                                <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                                <circle cx="12" cy="18" r="1" fill="currentColor"/>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedStudents.map(student => (
+                <div
+                  key={student.id}
+                  onClick={() => {
+                    setSelectedProfileStudent(student);
+                    setFormData(student);
+                    setPhoto(student.photo || '');
+                    setIsEditing(false);
+                    setErrors({});
+                  }}
+                  className={`bg-gray-900 rounded-xl p-6 border border-gray-800 cursor-pointer transition-all hover:border-red-600 hover:shadow-lg ${
+                    !student.isActive ? 'opacity-60' : ''
+                  }`}
+                >
+                  <div className="flex flex-col items-center space-y-4">
+                    {/* Photo */}
+                    <div className="relative">
+                      <img
+                        src={student.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop'}
+                        alt={student.fullName}
+                        className="w-24 h-32 object-cover rounded-lg"
+                      />
+                      {student.isFounder && (
+                        <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
+                          Fundador
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Info */}
+                    <div className="text-center">
+                      <h3 className="font-semibold text-white mb-1">{student.fullName}</h3>
+                      <p className="text-gray-400 text-sm">{DEFAULT_TEMPLES[student.unit as keyof typeof DEFAULT_TEMPLES]}</p>
+                      <div className={`mt-2 w-44 text-center py-1 rounded-full text-xs font-medium ${
+                        student.inviteStatus === 'accepted' 
+                          ? 'bg-green-600/20 text-green-400'
+                          : student.inviteStatus === 'pending'
+                          ? 'bg-yellow-600/20 text-yellow-400'
+                          : 'bg-red-600/20 text-red-400'
+                      }`}>
+                        {getStatusLabel(student.inviteStatus)}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {/* Paginação */}
-            {totalPages > 1 && (
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Paginação */}
+          {totalPages > 1 && (
               <div className="flex justify-between items-center mt-6">
                 <div className="text-sm text-gray-400">
                   Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredInvites.length)} de {filteredInvites.length}
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
                   <button
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-2 bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800'}`}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    // Lógica para mostrar as páginas corretas quando há muitas páginas
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`w-8 h-8 rounded-lg ${currentPage === pageNum ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'}`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                  {[...Array(totalPages).keys()].map(number => (
+                    <button
+                      key={number + 1}
+                      onClick={() => setCurrentPage(number + 1)}
+                      className={`w-8 h-8 rounded-lg ${currentPage === number + 1 ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}
+                    >
+                      {number + 1}
+                    </button>
+                  ))}
                   
                   <button
                     onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
@@ -728,7 +933,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 </div>
               </div>
             )}
-          </div>
+          </>
         ) : (
           <div className="bg-gray-800 rounded-lg p-6 text-center">
             <p className="text-gray-400">
