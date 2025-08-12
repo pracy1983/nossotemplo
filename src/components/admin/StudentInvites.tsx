@@ -1580,6 +1580,134 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                   </div>
                 </div>
                 
+                {/* Endereço e Cadastro */}
+                <div>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Endereço e Cadastro</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Data de Registro</label>
+                      <p className="text-white">
+                        {selectedProfileStudent?.invitedAt ? formatDate(selectedProfileStudent.invitedAt) : 'Não informada'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Status do Convite</label>
+                      <p className="text-white">
+                        {selectedProfileStudent?.inviteStatus === 'pending' ? 'Pendente' : 
+                         selectedProfileStudent?.inviteStatus === 'accepted' ? 'Aceito' : 
+                         selectedProfileStudent?.inviteStatus === 'expired' ? 'Expirado' : 'Não informado'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Rua</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.street || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, street: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.street || 'Não informada'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Número</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.number || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, number: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.number || 'Não informado'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Complemento</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.complement || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, complement: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.complement || 'Não informado'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Bairro</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.neighborhood || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, neighborhood: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.neighborhood || 'Não informado'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Cidade/UF</label>
+                      {isEditing ? (
+                        <div className="flex space-x-2">
+                          <input
+                            type="text"
+                            value={formData?.city || ''}
+                            onChange={(e) => setFormData(prev => prev ? ({ ...prev, city: e.target.value }) : null)}
+                            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                            placeholder="Cidade"
+                          />
+                          <input
+                            type="text"
+                            value={formData?.state || ''}
+                            onChange={(e) => setFormData(prev => prev ? ({ ...prev, state: e.target.value }) : null)}
+                            className="w-20 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                            placeholder="UF"
+                            maxLength={2}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-white">
+                          {selectedProfileStudent?.city && selectedProfileStudent?.state ? 
+                            `${selectedProfileStudent.city} - ${selectedProfileStudent.state}` : 
+                            selectedProfileStudent?.city || selectedProfileStudent?.state || 'Não informado'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">CEP</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.zipCode || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, zipCode: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                          placeholder="00000-000"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.zipCode || 'Não informado'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Como conheceu o templo</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={formData?.howFoundTemple || ''}
+                          onChange={(e) => setFormData(prev => prev ? ({ ...prev, howFoundTemple: e.target.value }) : null)}
+                          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                        />
+                      ) : (
+                        <p className="text-white">{selectedProfileStudent?.howFoundTemple || 'Não informado'}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Social Media */}
                 <div>
                   <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Redes Sociais</h3>
@@ -1637,6 +1765,93 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                           ) : 'Não informado'}
                         </p>
                       )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Status e Cargos */}
+                <div>
+                  <h3 className="text-lg font-semibold text-red-500 mb-4 [text-shadow:0_1px_2px_rgba(0,0,0,0.6)]">Status e Cargos</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        {selectedProfileStudent.isActive ? (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <span className="text-white">Ativo</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                            <span className="text-white">Não é ativo</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        {selectedProfileStudent.isAdmin ? (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                            <span className="text-white">Administrador</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+                            <span className="text-white">Não é administrador</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        {selectedProfileStudent.isFounder ? (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                            <span className="text-white">Fundador</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+                            <span className="text-white">Não é fundador</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        {selectedProfileStudent.isGuest ? (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                            <span className="text-white">Convidado</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="w-3 h-3 bg-gray-500 rounded-full mr-2"></div>
+                            <span className="text-white">Não é convidado</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Cargo</label>
+                      <p className="text-white">
+                        {selectedProfileStudent.role === 'admin' ? 'Administrador' : 
+                         selectedProfileStudent.role === 'collaborator' ? 'Colaborador' : 
+                         selectedProfileStudent.role === 'student' ? 'Estudante' : 'Não informado'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Última Atividade</label>
+                      <p className="text-white">
+                        {selectedProfileStudent.lastActivity ? formatDate(selectedProfileStudent.lastActivity) : 'Nenhum registro'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Termos de Imagem</label>
+                      <p className="text-white">
+                        {selectedProfileStudent.acceptsImageTerms ? 'Aceito' : 'Não aceito'}
+                      </p>
                     </div>
                   </div>
                 </div>
