@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Mail, Send, Copy, Check, Plus, Search, Link, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, Edit3, Save, X, Upload, Grid, List, Trash2 } from 'lucide-react';
+import { Mail, Send, Copy, Check, Plus, Search, ChevronLeft, ChevronRight, CheckSquare, Square, AlertTriangle, Edit3, Save, X, Upload, Grid, List, Trash2 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
-import { Student, ViewMode } from '../../types';
+import { Student } from '../../types';
 import { DEFAULT_TEMPLES } from '../../utils/constants';
-import { validateEmail, formatCPF, formatPhone, formatDate, generateId, generateTempPassword } from '../../utils/helpers';
+import { formatCPF, generateId, generateTempPassword, validateEmail } from '../../utils/helpers';
 import { sendInviteEmail } from '../../services/emailServiceFrontend';
 import { toast } from 'react-toastify';
 import Modal from '../common/Modal';
@@ -30,18 +30,21 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const [currentPage, setCurrentPage] = useState(1);
   
   // Estado para controle de visualização (lista/cards)
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    // Carregar preferência do localStorage ou usar 'list' como padrão
-    const saved = localStorage.getItem('memberManagement_preferences');
-    return saved ? JSON.parse(saved).viewMode || 'list' : 'list';
-  });
+  type ViewMode = 'list' | 'cards';
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   
   // Estado para controle de itens por página
-  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
-    // Carregar preferência do localStorage ou usar 10 como padrão
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  
+  // Carregar preferências salvas do localStorage
+  useEffect(() => {
     const saved = localStorage.getItem('memberManagement_preferences');
-    return saved ? JSON.parse(saved).itemsPerPage || 10 : 10;
-  });
+    if (saved) {
+      const preferences = JSON.parse(saved);
+      if (preferences.viewMode) setViewMode(preferences.viewMode);
+      if (preferences.itemsPerPage) setItemsPerPage(preferences.itemsPerPage);
+    }
+  }, []);
   
   const [emailTemplate, setEmailTemplate] = useState({
     subject: 'Convite para o Nosso Templo',
@@ -110,19 +113,10 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
       reader.readAsDataURL(file);
     }
   };
-
   // Get students with invite information
   const invitedStudents = filteredStudents.filter(student => 
     student.inviteStatus || student.inviteToken
   );
-
-  // Função para salvar preferências do usuário
-  const saveUserPreferences = () => {
-    localStorage.setItem('memberManagement_preferences', JSON.stringify({
-      viewMode,
-      itemsPerPage
-    }));
-  };
 
   // Filter invited students
   const filteredInvites = invitedStudents.filter(student => {
@@ -140,51 +134,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   const paginatedStudents = filteredInvites.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredInvites.length / itemsPerPage);
   
-  // Componente StudentCard para visualização em cards
-  const StudentCard: React.FC<{ student: Student }> = ({ student }) => (
-    <div
-      onClick={() => {
-        setSelectedProfileStudent(student);
-        setFormData(student);
-        setPhoto(student.photo || '');
-        setIsEditing(false);
-        setErrors({});
-      }}
-      className={`bg-gray-900 rounded-xl p-6 border border-gray-800 cursor-pointer transition-all hover:border-red-600 hover:shadow-lg ${
-        !student.isActive ? 'opacity-60' : ''
-      }`}
-    >
-      <div className="flex flex-col items-center space-y-4">
-        {/* Photo */}
-        <div className="relative">
-          <img
-            src={student.photo || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=300&h=400&fit=crop'}
-            alt={student.fullName}
-            className="w-24 h-32 object-cover rounded-lg"
-          />
-          {student.isFounder && (
-            <div className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-full">
-              Fundador
-            </div>
-          )}
-        </div>
-        
-        {/* Info */}
-        <div className="text-center">
-          <h3 className="font-semibold text-white mb-1">{student.fullName}</h3>
-          <p className="text-gray-400 text-sm">{DEFAULT_TEMPLES[student.unit as keyof typeof DEFAULT_TEMPLES]}</p>
-          <div className={`mt-2 w-44 text-center py-1 rounded-full text-xs font-medium ${
-            student.isActive
-              ? 'bg-green-600/20 text-green-400'
-              : 'bg-red-600/20 text-red-400'
-          }`}>
-            {student.isActive ? 'Ativo' : `Inativo desde ${student.inactiveSince || 'N/A'}`}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   // Student ativo para o menu de ações
   const currentActionStudent = students.find(s => s.id === actionMenuOpenId);
 
@@ -220,30 +169,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
   };
   
   // Funções para ações em massa
-  const handleBulkApprove = () => {
-    if (selectedStudents.size === 0) return;
-    
-    if (confirm(`Deseja aprovar ${selectedStudents.size} membros selecionados?`)) {
-      // Implementar a lógica de aprovação em massa
-      selectedStudents.forEach(id => {
-        handleApproveStudent(id);
-      });
-      setSelectedStudents(new Set());
-    }
-  };
-  
-  const handleBulkReject = () => {
-    if (selectedStudents.size === 0) return;
-    
-    if (confirm(`Deseja rejeitar ${selectedStudents.size} membros selecionados?`)) {
-      // Implementar a lógica de rejeição em massa
-      selectedStudents.forEach(id => {
-        handleRejectStudent(id);
-      });
-      setSelectedStudents(new Set());
-    }
-  };
-  
   const handleBulkSendEmails = () => {
     if (selectedStudents.size === 0) return;
     setShowSendEmailsModal(true);
@@ -511,41 +436,6 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     }
   };
 
-  const handleApproveStudent = (studentId: string) => {
-    // Find the student
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
-    
-    // Update student status
-    const updatedStudentData = {
-      ...student,
-      isPendingApproval: false,
-      isActive: true
-    };
-    
-    // Here you would call an API to update the student with updatedStudentData
-    console.log('Dados atualizados:', updatedStudentData);
-    
-    // For now, we'll just show an alert
-    alert(`Membro ${student.fullName} aprovado com sucesso!`);
-  };
-
-  const handleRejectStudent = async (studentId: string) => {
-    try {
-      // Encontrar o estudante
-      const student = students.find(s => s.id === studentId);
-      if (!student) return;
-      
-      // Atualizar status para rejected
-      await updateStudent(studentId, { ...student, inviteStatus: 'expired' });
-      
-      toast.success('Convite rejeitado com sucesso');
-    } catch (error) {
-      console.error('Error rejecting student:', error);
-      alert('Erro ao rejeitar membro. Tente novamente.');
-    }
-  };
-
 
   
   const getStatusColor = (status?: string) => {
@@ -676,13 +566,13 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 </button>
                 <button
                   onClick={() => {
-                    setViewMode('card');
+                    setViewMode('cards');
                     localStorage.setItem('memberManagement_preferences', JSON.stringify({
-                      viewMode: 'card',
+                      viewMode: 'cards',
                       itemsPerPage
                     }));
                   }}
-                  className={`p-2 rounded ${viewMode === 'card' ? 'bg-red-600 text-white' : 'text-gray-400'}`}
+                  className={`p-2 rounded ${viewMode === 'cards' ? 'bg-red-600 text-white' : 'text-gray-400'}`}
                   title="Visualização em cards"
                 >
                   <Grid className="w-4 h-4" />
@@ -720,25 +610,48 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         {filteredInvites.length > 0 ? (
           <>
             {/* Seletor de itens por página */}
-            <div className="flex items-center mb-4">
-              <span className="text-sm text-gray-400 mr-2">Itens por página:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  const newValue = parseInt(e.target.value);
-                  setItemsPerPage(newValue);
-                  setCurrentPage(1); // Reset para primeira página
-                  localStorage.setItem('memberManagement_preferences', JSON.stringify({
-                    viewMode,
-                    itemsPerPage: newValue
-                  }));
-                }}
-                className="px-3 py-1 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={30}>30</option>
-                <option value={50}>50</option>
-              </select>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center">
+                <span className="text-sm text-gray-400 mr-2">Visualização:</span>
+                <div className="flex bg-gray-800 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-md ${viewMode === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                    title="Visualização em lista"
+                  >
+                    <List className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('cards')}
+                    className={`p-2 rounded-md ${viewMode === 'cards' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+                    title="Visualização em cards"
+                  >
+                    <Grid className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <span className="text-sm text-gray-400 mr-2">Itens por página:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value);
+                    setItemsPerPage(newValue);
+                    setCurrentPage(1);
+                    // Salvar preferência no localStorage
+                    localStorage.setItem('memberManagement_preferences', JSON.stringify({
+                      viewMode,
+                      itemsPerPage: newValue
+                    }));
+                  }}
+                  className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
+                >
+                  <option value={10}>10</option>
+                  <option value={30}>30</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
             
             {viewMode === 'list' ? (
@@ -769,7 +682,18 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                 </thead>
                 <tbody>
                   {paginatedStudents.map(student => (
-                    <tr key={student.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                    <tr 
+                      key={student.id} 
+                      className="border-b border-gray-800 hover:bg-gray-800/50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedProfileStudent(student);
+                        setFormData(student);
+                        setPhoto(student.photo || '');
+                        setIsEditing(false);
+                        setIsProfileModalOpen(true);
+                        setErrors({});
+                      }}
+                    >
                       <td className="p-3">
                         <div className="flex items-center">
                           <button 
@@ -851,6 +775,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     setFormData(student);
                     setPhoto(student.photo || '');
                     setIsEditing(false);
+                    setIsProfileModalOpen(true);
                     setErrors({});
                   }}
                   className={`bg-gray-900 rounded-xl p-6 border border-gray-800 cursor-pointer transition-all hover:border-red-600 hover:shadow-lg ${
@@ -1068,7 +993,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
               disabled={isSending}
               className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 px-4 py-2 rounded-lg transition-colors"
             >
-              <Link className="w-4 h-4" />
+              <Send className="w-4 h-4" />
               <span>{isSending ? 'Gerando...' : 'Gerar Link'}</span>
             </button>
             
