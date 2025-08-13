@@ -955,14 +955,17 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     // Gerar nova senha temporária
                     const tempPassword = generateTempPassword();
                     
-                    // Atualizar o estudante com a nova senha
+                    // Atualizar o estudante com a nova senha e status do convite
                     const updatedStudent = {
                       ...currentActionStudent,
                       tempPassword: tempPassword
                     };
                     
-                    // Atualizar no banco de dados
-                    await updateStudent(currentActionStudent.id!, { tempPassword: tempPassword });
+                    // Atualizar no banco de dados - redefinir o status do convite para pending
+                    await updateStudent(currentActionStudent.id!, { 
+                      tempPassword: tempPassword,
+                      inviteStatus: 'pending' 
+                    });
                     
                     // Enviar e-mail com a nova senha
                     const inviteUrl = `${window.location.origin}/convite/${updatedStudent.inviteToken || ''}`;
