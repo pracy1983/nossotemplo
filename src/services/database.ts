@@ -272,12 +272,6 @@ const dbAulaToAula = (dbAula: any): Aula => ({
 
 const aulaToDbAula = (aula: Partial<Aula>) => ({
   turma_id: aula.turmaId,
-  data: aula.data,
-  conteudo: aula.conteudo,
-  realizada: aula.realizada
-});
-
-// Authentication - FIXED: Better error handling and student lookup
 export const authenticateUser = async (email: string, password: string): Promise<User> => {
   try {
     console.log('Attempting authentication for:', email);
@@ -285,101 +279,148 @@ export const authenticateUser = async (email: string, password: string): Promise
     // Obter o cliente real do Supabase
     const client = await supabaseManager.getClient();
     
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password
-    });
+    try {
+      // Primeiro tenta autenticação normal
+      const { data, error } = await client.auth.signInWithPassword({
+        email,
+        password
+      });
 
-    if (error) {
-      console.error('Supabase auth error:', error);
-      
-      // Provide more specific error messages
-      if (error.message.includes('Invalid login credentials') || 
-          error.message.includes('invalid_credentials')) {
-        throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
-      } else if (error.message.includes('Email not confirmed')) {
-        throw new Error('Email não confirmado. Verifique sua caixa de entrada.');
-      } else if (error.message.includes('Too many requests')) {
-        throw new Error('Muitas tentativas de login. Aguarde alguns minutos.');
-      } else {
-        throw new Error(`Erro de autenticação: ${error.message}`);
+      if (!error && data.user) {
+        console.log('Authentication successful with normal credentials');
+        
+        // Continua com o fluxo normal de autenticação
+        console.log('Authentication successful, looking up student data for:', email);
+
+        // Get student data for the authenticated user
+        const { data: studentData, error: studentError } = await client
+          .from('students')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (studentError) {
+          console.error('Error fetching student data:', studentError);
+          
+          if (studentError.code === 'PGRST116') {
+            // No student found - this might be a valid auth user but not in students table
+            console.log('No student record found for authenticated user:', email);
+            
+            // Check if this is the admin user that might not be in students table
+            if (email === 'paularacy@gmail.com') {
+              // Create admin user in students table if it doesn't exist
+              try {
+                const { data: newStudentData, error: createError } = await client
+                  .from('students')
+                  .insert({
+                    full_name: 'Paula Racy - Administrador Principal',
+                    birth_date: '1980-01-01',
+                    email: email,
+                    unit: 'SP',
+                    is_admin: true,
+                    is_active: true,
+                    is_guest: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  })
+                  .select()
+                  .single();
+
+                if (createError) {
+                  console.error('Error creating admin student record:', createError);
+                  throw new Error('Erro ao criar registro de administrador. Entre em contato com o suporte.');
+                }
+
+                console.log('Admin student record created successfully');
+                const student = dbStudentToStudent(newStudentData);
+
+                return {
+                  id: data.user.id,
+                  email: data.user.email || '',
+                  isAdmin: student.isAdmin,
+                  student,
+                  studentId: student.id
+                };
+              } catch (createError) {
+                console.error('Failed to create admin student record:', createError);
+                throw new Error('Usuário autenticado mas sem registro no sistema. Entre em contato com o administrador.');
+              }
+            } else {
+              throw new Error('Usuário não encontrado no sistema. Entre em contato com o administrador.');
+            }
+          } else {
+            throw new Error(`Erro ao buscar dados do usuário: ${studentError.message}`);
+          }
+        }
+
+        console.log('Student data found:', studentData.full_name);
+
+        // Get attendance records for this student
+        const { data: attendanceData, error: attendanceError } = await client
+          .from('attendance_records')
+          .select('*')
+          .eq('student_id', studentData.id)
+          .order('date', { ascending: false });
+
+        if (attendanceError) {
+          console.warn('Error fetching attendance data:', attendanceError);
+          // Don't throw error, just continue without attendance data
+        }
+
+        const student = dbStudentToStudent(studentData);
+        
+        // Attach attendance records
+        if (attendanceData) {
+          student.attendance = attendanceData.map(dbAttendanceToAttendance);
+        }
+
+        console.log('Authentication completed successfully for:', student.fullName);
+
+        return {
+          id: data.user.id,
+          email: data.user.email || '',
+          isAdmin: student.isAdmin,
+          student,
+          studentId: student.id
+        };
       }
+      
+      // Se chegou aqui, a autenticação normal falhou
+      console.log('Normal authentication failed, checking for temporary password...');
+      
+    } catch (authError) {
+      console.log('Normal authentication failed with error:', authError);
+      // Continua para tentar com senha temporária
     }
-
-    if (!data.user) {
-      throw new Error('Usuário não encontrado');
-    }
-
-    console.log('Authentication successful, looking up student data for:', email);
-
-    // Get student data for the authenticated user
-    const { data: studentData, error: studentError } = await client
+    
+    // Verificar se existe um aluno com este email e uma senha temporária
+    console.log('Checking for student with temporary password...');
+    const { data: studentWithTempPass, error: tempPassError } = await client
       .from('students')
       .select('*')
       .eq('email', email)
+      .eq('invite_status', 'pending')
+      .not('temp_password', 'is', null)
       .single();
-
-    if (studentError) {
-      console.error('Error fetching student data:', studentError);
-      
-      if (studentError.code === 'PGRST116') {
-        // No student found - this might be a valid auth user but not in students table
-        console.log('No student record found for authenticated user:', email);
-        
-        // Check if this is the admin user that might not be in students table
-        if (email === 'paularacy@gmail.com') {
-          // Create admin user in students table if it doesn't exist
-          try {
-            const { data: newStudentData, error: createError } = await client
-              .from('students')
-              .insert({
-                full_name: 'Paula Racy - Administrador Principal',
-                birth_date: '1980-01-01',
-                email: email,
-                unit: 'SP',
-                is_admin: true,
-                is_active: true,
-                is_guest: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              })
-              .select()
-              .single();
-
-            if (createError) {
-              console.error('Error creating admin student record:', createError);
-              throw new Error('Erro ao criar registro de administrador. Entre em contato com o suporte.');
-            }
-
-            console.log('Admin student record created successfully');
-            const student = dbStudentToStudent(newStudentData);
-
-            return {
-              id: data.user.id,
-              email: data.user.email || '',
-              isAdmin: student.isAdmin,
-              student,
-              studentId: student.id
-            };
-          } catch (createError) {
-            console.error('Failed to create admin student record:', createError);
-            throw new Error('Usuário autenticado mas sem registro no sistema. Entre em contato com o administrador.');
-          }
-        } else {
-          throw new Error('Usuário não encontrado no sistema. Entre em contato com o administrador.');
-        }
-      } else {
-        throw new Error(`Erro ao buscar dados do usuário: ${studentError.message}`);
-      }
+    
+    if (tempPassError || !studentWithTempPass) {
+      console.error('No student found with pending invite and temp password:', tempPassError);
+      throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
     }
-
-    console.log('Student data found:', studentData.full_name);
+    
+    // Verificar se a senha fornecida corresponde à senha temporária
+    if (studentWithTempPass.temp_password !== password) {
+      console.error('Temporary password mismatch');
+      throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
+    }
+    
+    console.log('Temporary password authentication successful for:', studentWithTempPass.full_name);
 
     // Get attendance records for this student
     const { data: attendanceData, error: attendanceError } = await client
       .from('attendance_records')
       .select('*')
-      .eq('student_id', studentData.id)
+      .eq('student_id', studentWithTempPass.id)
       .order('date', { ascending: false });
 
     if (attendanceError) {
@@ -387,18 +428,19 @@ export const authenticateUser = async (email: string, password: string): Promise
       // Don't throw error, just continue without attendance data
     }
 
-    const student = dbStudentToStudent(studentData);
+    const student = dbStudentToStudent(studentWithTempPass);
     
     // Attach attendance records
     if (attendanceData) {
       student.attendance = attendanceData.map(dbAttendanceToAttendance);
     }
 
-    console.log('Authentication completed successfully for:', student.fullName);
+    console.log('Temporary password authentication completed successfully for:', student.fullName);
 
+    // Como não temos um usuário Supabase Auth real, criamos um objeto de usuário temporário
     return {
-      id: data.user.id,
-      email: data.user.email || '',
+      id: studentWithTempPass.id, // Usamos o ID do aluno como ID do usuário
+      email: studentWithTempPass.email,
       isAdmin: student.isAdmin,
       student,
       studentId: student.id
