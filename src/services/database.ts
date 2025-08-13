@@ -401,11 +401,26 @@ export const authenticateUser = async (email: string, password: string): Promise
     
     // Verificar se existe um aluno com este email e uma senha temporária
     console.log('Checking for student with temporary password...');
+    
+    // Primeiro, vamos verificar se o aluno existe com este email
+    const { data: studentCheck, error: studentCheckError } = await client
+      .from('students')
+      .select('id, email, invite_status, temp_password')
+      .eq('email', email)
+      .single();
+      
+    if (studentCheck) {
+      console.log('Found student with email:', email, 'Invite status:', studentCheck.invite_status, 'Has temp password:', !!studentCheck.temp_password);
+    } else {
+      console.log('No student found with email:', email, 'Error:', studentCheckError);
+    }
+    
+    // Agora fazemos a consulta específica para autenticação com senha temporária
+    // Removemos a restrição de invite_status para permitir login com senha temporária mesmo após aceitação
     const { data: studentWithTempPass, error: tempPassError } = await client
       .from('students')
       .select('*')
       .eq('email', email)
-      .eq('invite_status', 'pending')
       .not('temp_password', 'is', null)
       .single();
     
@@ -415,6 +430,7 @@ export const authenticateUser = async (email: string, password: string): Promise
     }
     
     // Verificar se a senha fornecida corresponde à senha temporária
+    console.log('Comparing provided password with stored temp password:', password, studentWithTempPass.temp_password);
     if (studentWithTempPass.temp_password !== password) {
       console.error('Temporary password mismatch');
       throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
