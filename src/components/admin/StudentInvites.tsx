@@ -13,7 +13,7 @@ interface StudentInvitesProps {
 }
 
 const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent }) => {
-  const { students: initialStudents, temples, addStudent, deleteStudent } = useData();
+  const { students: initialStudents, temples, addStudent, deleteStudent, updateStudent, refreshData } = useData();
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
