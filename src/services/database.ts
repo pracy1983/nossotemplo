@@ -272,6 +272,12 @@ const dbAulaToAula = (dbAula: any): Aula => ({
 
 const aulaToDbAula = (aula: Partial<Aula>) => ({
   turma_id: aula.turmaId,
+  data: aula.data,
+  conteudo: aula.conteudo,
+  realizada: aula.realizada
+});
+
+// Authentication - FIXED: Better error handling and student lookup
 export const authenticateUser = async (email: string, password: string): Promise<User> => {
   try {
     console.log('Attempting authentication for:', email);
