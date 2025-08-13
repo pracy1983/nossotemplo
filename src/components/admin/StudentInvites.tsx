@@ -962,7 +962,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
                     };
                     
                     // Atualizar no banco de dados
-                    await addStudent(updatedStudent);
+                    await updateStudent(currentActionStudent.id!, { tempPassword: tempPassword });
                     
                     // Enviar e-mail com a nova senha
                     const inviteUrl = `${window.location.origin}/convite/${updatedStudent.inviteToken || ''}`;
