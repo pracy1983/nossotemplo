@@ -15,7 +15,8 @@ export interface Student {
   notEntryDate?: string;
   masterMagusInitiationDate?: string;
   isFounder: boolean;
-  isActive: boolean;
+  isActive: boolean; // Mantido para compatibilidade
+  activityStatus: 'active' | 'inactive' | 'pending';
   inactiveSince?: string;
   lastActivity?: string;
   attendance: AttendanceRecord[];

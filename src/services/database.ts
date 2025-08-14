@@ -19,6 +19,7 @@ interface DatabaseStudent {
   master_magus_initiation_date?: string | null;
   is_founder: boolean;
   is_active: boolean;
+  activity_status?: 'active' | 'inactive' | 'pending';
   inactive_since?: string | null;
   last_activity?: string | null;
   is_admin: boolean;
@@ -96,6 +97,7 @@ const dbStudentToStudent = (dbStudent: DatabaseStudent): Student => {
     masterMagusInitiationDate: dbStudent.master_magus_initiation_date || undefined,
     isFounder: dbStudent.is_founder,
     isActive: dbStudent.is_active,
+    activityStatus: dbStudent.activity_status || (dbStudent.is_active ? 'active' : 'inactive'),
     inactiveSince: dbStudent.inactive_since || undefined,
     lastActivity: dbStudent.last_activity || undefined,
     isAdmin: dbStudent.is_admin,
@@ -143,6 +145,7 @@ const studentToDbStudent = (student: Partial<Student>): Partial<DatabaseStudent>
   if (student.masterMagusInitiationDate !== undefined) dbData.master_magus_initiation_date = student.masterMagusInitiationDate === '' ? undefined : student.masterMagusInitiationDate;
   if (student.isFounder !== undefined) dbData.is_founder = student.isFounder;
   if (student.isActive !== undefined) dbData.is_active = student.isActive;
+  if (student.activityStatus !== undefined) dbData.activity_status = student.activityStatus;
   if (student.inactiveSince !== undefined) {
     // Converter string vazia para null para manter consistência com o tipo da interface
     dbData.inactive_since = student.inactiveSince === '' ? null : student.inactiveSince;

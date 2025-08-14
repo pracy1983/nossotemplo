@@ -1,0 +1,5 @@
+Adicionar após a linha 272:
+activityStatus: 'pending', // Status de atividade pendente para novos membros
+
+Adicionar após a linha 332:
+activityStatus: 'pending', // Status de atividade pendente para novos membros

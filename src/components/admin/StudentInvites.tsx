@@ -270,6 +270,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         religion: '',
         isFounder: false,
         isActive: false, // Will be activated after approval
+        activityStatus: 'pending',
         attendance: [],
         isAdmin: false,
         isGuest: false,
@@ -330,6 +331,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         religion: '',
         isFounder: false,
         isActive: false, // Will be activated after approval
+        activityStatus: 'pending',
         attendance: [],
         isAdmin: false,
         isGuest: false,
@@ -390,7 +392,8 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
     const updatedStudentData = {
       ...student,
       isPendingApproval: false,
-      isActive: true
+      isActive: true,
+      activityStatus: 'active'
     };
     
     // Here you would call an API to update the student with updatedStudentData
@@ -410,6 +413,7 @@ const StudentInvites: React.FC<StudentInvitesProps> = ({ onNavigateToAddStudent 
         ...student,
         isPendingApproval: false,
         isActive: false,
+        activityStatus: 'pending',
         inviteStatus: 'rejected' as const
       };
 

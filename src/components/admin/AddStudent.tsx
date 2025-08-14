@@ -145,6 +145,7 @@ const AddStudent: React.FC<AddStudentProps> = ({ onNavigateToList }) => {
         masterMagusInitiationDate: formData.masterMagusInitiationDate || undefined,
         isFounder: formData.isFounder || false,
         isActive: formData.isActive ?? true,
+        activityStatus: formData.isActive ? 'active' : 'pending',
         attendance: formData.attendance || [],
         isAdmin: formData.isAdmin || false,
         isGuest: formData.isGuest || false,

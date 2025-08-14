@@ -513,6 +513,7 @@ Equipe Nosso Templo`
       mappedStudent.isGuest = false;
       mappedStudent.role = 'student';
       mappedStudent.isActive = true;
+      mappedStudent.activityStatus = 'pending';
       mappedStudent.attendance = [];
       mappedStudent.isPendingApproval = false;
       
