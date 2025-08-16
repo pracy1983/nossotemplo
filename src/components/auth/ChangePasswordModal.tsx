@@ -66,13 +66,22 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       
       // Verificar se o usuário está logado com senha temporária
       const student = students.find(s => s.email === userEmail);
-      let passwordIsValid = false;
       
-      // Se o usuário tem senha temporária e a senha fornecida corresponde
-      if (student?.tempPassword) {
+      if (!student) {
+        console.error('Estudante não encontrado para o email:', userEmail);
+        setError('Usuário não encontrado');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Se o usuário tem senha temporária
+      if (student.tempPassword) {
+        console.log('Verificando senha temporária para:', userEmail);
+        
         if (student.tempPassword === currentPassword) {
-          console.log('Senha temporária válida para:', userEmail);
-          passwordIsValid = true;
+          console.log('Senha temporária válida');
+          // Se for senha temporária, não precisamos verificar no Supabase Auth
+          // Apenas continuamos o processo de atualização
         } else {
           console.log('Senha temporária fornecida não corresponde');
           setError('Senha atual incorreta');
@@ -81,31 +90,22 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         }
       } else {
         // Se não tem senha temporária, verifica no Supabase Auth
+        console.log('Verificando autenticação normal para:', userEmail);
+        
         try {
-          console.log('Verificando autenticação normal para:', userEmail);
-          const { data: userData } = await supabase.auth.getUser();
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: userEmail,
+            password: currentPassword,
+          });
           
-          if (userData?.user) {
-            console.log('Usuário existe no Auth, verificando senha');
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: userEmail,
-              password: currentPassword,
-            });
-            
-            if (signInError) {
-              console.error('Erro na autenticação:', signInError);
-              setError('Senha atual incorreta');
-              setIsLoading(false);
-              return;
-            }
-            
-            passwordIsValid = true;
-          } else {
-            console.log('Usuário não existe no Auth e não tem senha temporária');
-            setError('Credenciais inválidas');
+          if (signInError) {
+            console.error('Erro na autenticação:', signInError);
+            setError('Senha atual incorreta');
             setIsLoading(false);
             return;
           }
+          
+          console.log('Autenticação normal bem-sucedida');
         } catch (signInError) {
           console.error('Erro ao tentar autenticar com senha atual:', signInError);
           setError('Erro ao verificar credenciais');
