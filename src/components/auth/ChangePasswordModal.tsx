@@ -64,38 +64,53 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         return;
       }
       
-      // Verificar se é uma senha temporária
+      // Verificar se o usuário está logado com senha temporária
       const student = students.find(s => s.email === userEmail);
       let passwordIsValid = false;
       
-      if (student?.tempPassword && student.tempPassword === currentPassword) {
-        // Se é senha temporária e está correta
-        console.log('Verificando senha temporária:', currentPassword, student.tempPassword);
-        passwordIsValid = true;
+      // Se o usuário tem senha temporária e a senha fornecida corresponde
+      if (student?.tempPassword) {
+        if (student.tempPassword === currentPassword) {
+          console.log('Senha temporária válida para:', userEmail);
+          passwordIsValid = true;
+        } else {
+          console.log('Senha temporária fornecida não corresponde');
+          setError('Senha atual incorreta');
+          setIsLoading(false);
+          return;
+        }
       } else {
+        // Se não tem senha temporária, verifica no Supabase Auth
         try {
-          // Verificar se o usuário já existe no Auth
+          console.log('Verificando autenticação normal para:', userEmail);
           const { data: userData } = await supabase.auth.getUser();
           
           if (userData?.user) {
-            // Tentar autenticação normal apenas se o usuário já existir no Auth
-            console.log('Usuário existe no Auth, verificando senha atual');
+            console.log('Usuário existe no Auth, verificando senha');
             const { error: signInError } = await supabase.auth.signInWithPassword({
               email: userEmail,
               password: currentPassword,
             });
             
-            if (!signInError) {
-              passwordIsValid = true;
+            if (signInError) {
+              console.error('Erro na autenticação:', signInError);
+              setError('Senha atual incorreta');
+              setIsLoading(false);
+              return;
             }
+            
+            passwordIsValid = true;
           } else {
-            console.log('Usuário não existe no Auth, mas está tentando usar senha não-temporária');
-            setError('Senha atual incorreta');
+            console.log('Usuário não existe no Auth e não tem senha temporária');
+            setError('Credenciais inválidas');
+            setIsLoading(false);
             return;
           }
         } catch (signInError) {
           console.error('Erro ao tentar autenticar com senha atual:', signInError);
-          // Não definimos passwordIsValid como true aqui, pois a autenticação falhou
+          setError('Erro ao verificar credenciais');
+          setIsLoading(false);
+          return;
         }
       }
       
