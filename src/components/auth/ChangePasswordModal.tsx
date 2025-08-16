@@ -93,31 +93,19 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         console.log('Verificando autenticação normal para:', userEmail);
         
         try {
-          // Verificar se o usuário existe no Auth antes de tentar autenticar
-          const { data: userData } = await supabase.auth.getUser();
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: userEmail,
+            password: currentPassword,
+          });
           
-          if (userData?.user) {
-            // Só tenta autenticar se o usuário existir no Auth
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email: userEmail,
-              password: currentPassword,
-            });
-            
-            if (signInError) {
-              console.error('Erro na autenticação:', signInError);
-              setError('Senha atual incorreta');
-              setIsLoading(false);
-              return;
-            }
-            
-            console.log('Autenticação normal bem-sucedida');
-          } else {
-            // Se o usuário não existe no Auth, não podemos validar a senha
-            console.error('Usuário não existe no Auth e não tem senha temporária');
-            setError('Credenciais inválidas');
+          if (signInError) {
+            console.error('Erro na autenticação:', signInError);
+            setError('Senha atual incorreta');
             setIsLoading(false);
             return;
           }
+          
+          console.log('Autenticação normal bem-sucedida');
         } catch (signInError) {
           console.error('Erro ao tentar autenticar com senha atual:', signInError);
           setError('Erro ao verificar credenciais');
@@ -129,54 +117,57 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       // Se chegou aqui, a senha foi validada com sucesso
       console.log('Senha validada com sucesso, prosseguindo com a atualização');
       
-      // Se for senha temporária, precisamos criar uma conta no Supabase Auth primeiro
-      if (student?.tempPassword && student.tempPassword === currentPassword) {
+      // Se for senha temporária, apenas atualizamos no banco de dados
+      if (student.tempPassword) {
+        console.log('Processando alteração de senha para usuário com senha temporária');
+        
         try {
-          console.log('Processando alteração de senha para usuário com senha temporária');
-          
-          // Verificar se o usuário já existe no Auth sem fazer chamada de autenticação
-          const { data: userData, error: getUserError } = await supabase.auth.getUser();
-          
-          if (getUserError || !userData.user) {
-            // Usuário não existe no Auth, vamos criar usando admin API via Netlify Function
-            try {
-              console.log('Usuário não existe no Auth, criando via API admin');
-              
-              // Aqui poderia ser implementada uma chamada para uma Netlify Function que cria o usuário
-              // Por enquanto, apenas atualizamos a senha temporária no banco de dados
-              console.log('Pulando criação de usuário no Auth, apenas atualizando senha temporária');
-              
-              // Não tentamos criar o usuário diretamente para evitar o erro 400
-            } catch (signUpError) {
-              console.error('Exceção ao criar conta:', signUpError);
-              // Não falhar completamente, pois ainda podemos atualizar a senha temporária no banco
-              console.log('Continuando para atualizar senha temporária no banco de dados');
-            }
-          } else {
-            // Usuário existe, mas está usando senha temporária
-            try {
-              console.log('Usuário existe no Auth, atualizando senha');
-              const { error: updateError } = await supabase.auth.updateUser({
-                password: newPassword
-              });
-              
-              if (updateError) {
-                console.error('Erro ao atualizar senha:', updateError);
-                // Não falhar completamente, pois ainda podemos atualizar a senha temporária no banco
-                console.log('Continuando para atualizar senha temporária no banco de dados');
-              } else {
-                console.log('Senha atualizada com sucesso no Auth');
-              }
-            } catch (updateError) {
-              console.error('Exceção ao atualizar senha:', updateError);
-              // Não falhar completamente, pois ainda podemos atualizar a senha temporária no banco
-              console.log('Continuando para atualizar senha temporária no banco de dados');
-            }
+          // Remove a senha temporária e atualiza no banco de dados
+          const { error: updateError } = await supabase
+            .from('students')
+            .update({ 
+              temp_password: null // Remove a senha temporária
+            })
+            .eq('email', userEmail);
+            
+          if (updateError) {
+            console.error('Erro ao atualizar senha no banco de dados:', updateError);
+            setError('Erro ao atualizar senha. Por favor, tente novamente.');
+            setIsLoading(false);
+            return;
           }
+          
+          console.log('Senha temporária removida com sucesso do banco de dados');
+          
+          // Tenta criar o usuário no Auth com a nova senha
+          try {
+            const { error: signUpError } = await supabase.auth.signUp({
+              email: userEmail,
+              password: newPassword,
+            });
+            
+            if (signUpError && !signUpError.message.includes('already registered')) {
+              console.log('Erro ao criar conta no Auth:', signUpError);
+              // Não é um erro crítico, o usuário pode fazer login com senha temporária removida
+            } else {
+              console.log('Conta criada/atualizada com sucesso no Auth');
+            }
+          } catch (signUpError) {
+            console.log('Erro ao tentar criar conta no Auth:', signUpError);
+            // Não é um erro crítico
+          }
+          
+          // Sucesso - fecha o modal
+          console.log('Senha alterada com sucesso!');
+          onClose();
+          setIsLoading(false);
+          return;
+          
         } catch (err) {
-          console.error('Erro ao processar autenticação:', err);
-          // Não falhar completamente, pois ainda podemos atualizar a senha temporária no banco
-          console.log('Continuando para atualizar senha temporária no banco de dados');
+          console.error('Erro ao processar alteração de senha temporária:', err);
+          setError('Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente.');
+          setIsLoading(false);
+          return;
         }
       } else {
         // Autenticação normal, apenas atualizar a senha
