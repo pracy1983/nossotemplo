@@ -93,19 +93,31 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         console.log('Verificando autenticação normal para:', userEmail);
         
         try {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: userEmail,
-            password: currentPassword,
-          });
+          // Verificar se o usuário existe no Auth antes de tentar autenticar
+          const { data: userData } = await supabase.auth.getUser();
           
-          if (signInError) {
-            console.error('Erro na autenticação:', signInError);
-            setError('Senha atual incorreta');
+          if (userData?.user) {
+            // Só tenta autenticar se o usuário existir no Auth
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email: userEmail,
+              password: currentPassword,
+            });
+            
+            if (signInError) {
+              console.error('Erro na autenticação:', signInError);
+              setError('Senha atual incorreta');
+              setIsLoading(false);
+              return;
+            }
+            
+            console.log('Autenticação normal bem-sucedida');
+          } else {
+            // Se o usuário não existe no Auth, não podemos validar a senha
+            console.error('Usuário não existe no Auth e não tem senha temporária');
+            setError('Credenciais inválidas');
             setIsLoading(false);
             return;
           }
-          
-          console.log('Autenticação normal bem-sucedida');
         } catch (signInError) {
           console.error('Erro ao tentar autenticar com senha atual:', signInError);
           setError('Erro ao verificar credenciais');
@@ -114,11 +126,8 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         }
       }
       
-      if (!passwordIsValid) {
-        setError('Senha atual incorreta');
-        setIsLoading(false);
-        return;
-      }
+      // Se chegou aqui, a senha foi validada com sucesso
+      console.log('Senha validada com sucesso, prosseguindo com a atualização');
       
       // Se for senha temporária, precisamos criar uma conta no Supabase Auth primeiro
       if (student?.tempPassword && student.tempPassword === currentPassword) {
