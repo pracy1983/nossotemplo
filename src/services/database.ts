@@ -288,8 +288,65 @@ export const authenticateUser = async (email: string, password: string): Promise
     // Obter o cliente real do Supabase
     const client = await supabaseManager.getClient();
     
+    // MODIFICAÇÃO: Primeiro verificar se existe um aluno com senha temporária
+    console.log('Checking for student with temporary password first...');
+    
+    // Verificar se existe um aluno com este email e uma senha temporária
+    const { data: studentWithTempPass, error: tempPassError } = await client
+      .from('students')
+      .select('*')
+      .eq('email', email)
+      .not('temp_password', 'is', null)
+      .single();
+    
+    // Se encontrou um aluno com senha temporária, verificar se a senha corresponde
+    if (!tempPassError && studentWithTempPass) {
+      console.log('Found student with email and temp password:', email, 'Has temp password:', !!studentWithTempPass.temp_password);
+      
+      // Verificar se a senha fornecida corresponde à senha temporária
+      console.log('Comparing provided password with stored temp password:', password, studentWithTempPass.temp_password);
+      if (studentWithTempPass.temp_password === password) {
+        console.log('Temporary password authentication successful for:', studentWithTempPass.full_name);
+
+        // Get attendance records for this student
+        const { data: attendanceData, error: attendanceError } = await client
+          .from('attendance_records')
+          .select('*')
+          .eq('student_id', studentWithTempPass.id)
+          .order('date', { ascending: false });
+
+        if (attendanceError) {
+          console.warn('Error fetching attendance data:', attendanceError);
+          // Don't throw error, just continue without attendance data
+        }
+
+        const student = dbStudentToStudent(studentWithTempPass);
+        
+        // Attach attendance records
+        if (attendanceData) {
+          student.attendance = attendanceData.map(dbAttendanceToAttendance);
+        }
+
+        console.log('Temporary password authentication completed successfully for:', student.fullName);
+
+        // Como não temos um usuário Supabase Auth real, criamos um objeto de usuário temporário
+        return {
+          id: studentWithTempPass.id, // Usamos o ID do aluno como ID do usuário
+          email: studentWithTempPass.email,
+          isAdmin: student.isAdmin,
+          student,
+          studentId: student.id
+        };
+      } else {
+        console.log('Temporary password mismatch, trying normal authentication...');
+      }
+    } else {
+      console.log('No student found with temporary password, trying normal authentication...');
+    }
+    
+    // Se não encontrou aluno com senha temporária ou a senha não corresponde, tenta autenticação normal
     try {
-      // Primeiro tenta autenticação normal
+      // Tenta autenticação normal
       const { data, error } = await client.auth.signInWithPassword({
         email,
         password
@@ -395,81 +452,13 @@ export const authenticateUser = async (email: string, password: string): Promise
       }
       
       // Se chegou aqui, a autenticação normal falhou
-      console.log('Normal authentication failed, checking for temporary password...');
+      console.log('Normal authentication failed');
+      throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
       
     } catch (authError) {
       console.log('Normal authentication failed with error:', authError);
-      // Continua para tentar com senha temporária
-    }
-    
-    // Verificar se existe um aluno com este email e uma senha temporária
-    console.log('Checking for student with temporary password...');
-    
-    // Primeiro, vamos verificar se o aluno existe com este email
-    const { data: studentCheck, error: studentCheckError } = await client
-      .from('students')
-      .select('id, email, invite_status, temp_password')
-      .eq('email', email)
-      .single();
-      
-    if (studentCheck) {
-      console.log('Found student with email:', email, 'Invite status:', studentCheck.invite_status, 'Has temp password:', !!studentCheck.temp_password);
-    } else {
-      console.log('No student found with email:', email, 'Error:', studentCheckError);
-    }
-    
-    // Agora fazemos a consulta específica para autenticação com senha temporária
-    // Removemos a restrição de invite_status para permitir login com senha temporária mesmo após aceitação
-    const { data: studentWithTempPass, error: tempPassError } = await client
-      .from('students')
-      .select('*')
-      .eq('email', email)
-      .not('temp_password', 'is', null)
-      .single();
-    
-    if (tempPassError || !studentWithTempPass) {
-      console.error('No student found with pending invite and temp password:', tempPassError);
       throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
     }
-    
-    // Verificar se a senha fornecida corresponde à senha temporária
-    console.log('Comparing provided password with stored temp password:', password, studentWithTempPass.temp_password);
-    if (studentWithTempPass.temp_password !== password) {
-      console.error('Temporary password mismatch');
-      throw new Error('Email ou senha incorretos. Verifique suas credenciais.');
-    }
-    
-    console.log('Temporary password authentication successful for:', studentWithTempPass.full_name);
-
-    // Get attendance records for this student
-    const { data: attendanceData, error: attendanceError } = await client
-      .from('attendance_records')
-      .select('*')
-      .eq('student_id', studentWithTempPass.id)
-      .order('date', { ascending: false });
-
-    if (attendanceError) {
-      console.warn('Error fetching attendance data:', attendanceError);
-      // Don't throw error, just continue without attendance data
-    }
-
-    const student = dbStudentToStudent(studentWithTempPass);
-    
-    // Attach attendance records
-    if (attendanceData) {
-      student.attendance = attendanceData.map(dbAttendanceToAttendance);
-    }
-
-    console.log('Temporary password authentication completed successfully for:', student.fullName);
-
-    // Como não temos um usuário Supabase Auth real, criamos um objeto de usuário temporário
-    return {
-      id: studentWithTempPass.id, // Usamos o ID do aluno como ID do usuário
-      email: studentWithTempPass.email,
-      isAdmin: student.isAdmin,
-      student,
-      studentId: student.id
-    };
   } catch (error) {
     console.error('Error in authenticateUser:', error);
     throw error;
@@ -727,7 +716,7 @@ export const deleteStudent = async (id: string): Promise<void> => {
         if (!response.ok) {
           console.warn(`Usuário ${student.email} excluído da tabela students, mas não foi possível excluir da autenticação.`);
         } else {
-          const result = await response.json();
+          await response.json(); // Consumir a resposta sem armazenar
           console.log(`Usuário ${student.email} excluído com sucesso da autenticação.`);
         }
       } catch (authError) {
