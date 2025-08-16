@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   // userId não é utilizado
 }) => {
   const { user } = useAuth();
+  const { students } = useData();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -62,39 +64,76 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         return;
       }
       
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userEmail,
-        password: currentPassword,
-      });
+      // Verificar se é uma senha temporária
+      const student = students.find(s => s.email === userEmail);
+      let passwordIsValid = false;
       
-      if (signInError) {
+      if (student?.tempPassword && student.tempPassword === currentPassword) {
+        // Se é senha temporária e está correta
+        console.log('Verificando senha temporária:', currentPassword, student.tempPassword);
+        passwordIsValid = true;
+      } else {
+        // Tentar autenticação normal
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: userEmail,
+          password: currentPassword,
+        });
+        
+        if (!signInError) {
+          passwordIsValid = true;
+        }
+      }
+      
+      if (!passwordIsValid) {
         setError('Senha atual incorreta');
         setIsLoading(false);
         return;
       }
       
-      // Atualizar a senha
+      // Atualizar a senha no Supabase Auth
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
       
       if (updateError) {
         setError(updateError.message);
-      } else {
-        setSuccess(true);
-        // Limpar os campos
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        
-        // Notificar o componente pai
-        onSuccess();
-        
-        // Fechar o modal após um breve delay
-        setTimeout(() => {
-          onClose();
-        }, 2000);
+        setIsLoading(false);
+        return;
       }
+      
+      // Se o usuário estava usando senha temporária, limpar a senha temporária no banco
+      if (student?.tempPassword) {
+        try {
+          // Atualizar o registro do estudante para remover a senha temporária
+          const { error: updateStudentError } = await supabase
+            .from('students')
+            .update({ tempPassword: null })
+            .eq('id', student.id);
+            
+          if (updateStudentError) {
+            console.error('Erro ao limpar senha temporária:', updateStudentError);
+            // Não vamos falhar a operação por causa disso, apenas log
+          } else {
+            console.log('Senha temporária removida com sucesso');
+          }
+        } catch (err) {
+          console.error('Erro ao atualizar registro do estudante:', err);
+        }
+      }
+      
+      setSuccess(true);
+      // Limpar os campos
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // Notificar o componente pai
+      onSuccess();
+      
+      // Fechar o modal após um breve delay
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (err) {
       console.error('Erro ao alterar senha:', err);
       setError('Ocorreu um erro ao alterar sua senha. Tente novamente.');
