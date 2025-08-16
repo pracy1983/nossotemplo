@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Edit3, Save, X, Upload } from 'lucide-react';
+import { Edit3, Save, X, Upload, Lock } from 'lucide-react';
+import ChangePasswordModal from '../auth/ChangePasswordModal';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Student } from '../../types';
@@ -20,6 +21,7 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentU
   const [formData, setFormData] = useState<Partial<Student>>(student);
   const [photo, setPhoto] = useState<string>(student.photo || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   const handleSave = async () => {
     if (!formData.fullName || !formData.email) {
@@ -110,6 +112,16 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentU
 
   return (
     <div className="space-y-6">
+      {/* Change Password Modal */}
+      <ChangePasswordModal 
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        onSuccess={() => {
+          // Opcional: adicionar alguma lógica após a senha ser alterada com sucesso
+          console.log('Senha alterada com sucesso');
+        }}
+      />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -118,13 +130,22 @@ const StudentProfileEdit: React.FC<StudentProfileProps> = ({ student, onStudentU
         </div>
         
         {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>Editar</span>
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setIsChangePasswordModalOpen(true)}
+              className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Mudar Senha</span>
+            </button>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Editar</span>
+            </button>
+          </div>
         ) : (
           <div className="flex items-center space-x-2">
             <button

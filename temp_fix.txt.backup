@@ -1,0 +1,2 @@
+// Adicionar activityStatus: 'pending' após isActive: false em StudentInvites.tsx
+// Linhas 272-273 e 332-333
